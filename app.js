@@ -2,16 +2,10 @@
 
 // Database configuration
 const DB_NAME = 'MealLoggerDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented for sugar field
 const STORE_NAME = 'meals';
 
 // Google API configuration
-// IMPORTANT: Replace this with your own Client ID from Google Cloud Console
-// 1. Go to https://console.cloud.google.com/
-// 2. Create a new project or select existing
-// 3. Enable Google Sheets API and Google Drive API
-// 4. Create OAuth 2.0 credentials (Web application)
-// 5. Add your domain to authorized JavaScript origins
 const GOOGLE_CLIENT_ID = '381176979324-8t9p7um4b7srt2i00gjatm3d0gu372hs.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 
@@ -55,9 +49,19 @@ function loadSavedSettings() {
     }
 }
 
+// Calculate calories from macros
+function calculateCalories() {
+    const protein = parseInt(document.getElementById('protein').value) || 0;
+    const carbs = parseInt(document.getElementById('carbs').value) || 0;
+    const fat = parseInt(document.getElementById('fat').value) || 0;
+
+    // Protein: 4 cal/g, Carbs: 4 cal/g, Fat: 9 cal/g
+    const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+    document.getElementById('calories').value = calories;
+}
+
 // Initialize Google API
 function initGoogleAPI() {
-    // Wait for the Google API to load
     const checkGoogleAPI = setInterval(() => {
         if (typeof google !== 'undefined' && google.accounts) {
             clearInterval(checkGoogleAPI);
@@ -65,7 +69,6 @@ function initGoogleAPI() {
         }
     }, 100);
 
-    // Also wait for gapi to load
     const checkGapi = setInterval(() => {
         if (typeof gapi !== 'undefined') {
             clearInterval(checkGapi);
@@ -77,7 +80,6 @@ function initGoogleAPI() {
 async function initGapiClient() {
     try {
         await gapi.client.init({});
-        // Load the sheets API
         await gapi.client.load('sheets', 'v4');
         await gapi.client.load('drive', 'v3');
         console.log('Google API client initialized');
@@ -105,8 +107,6 @@ function handleAuthCallback(response) {
 
     accessToken = response.access_token;
     gapi.client.setToken({ access_token: accessToken });
-
-    // Get user info
     fetchUserInfo();
 }
 
@@ -120,7 +120,6 @@ async function fetchUserInfo() {
         updateGoogleAccountUI();
         showToast('Signed in successfully', 'success');
 
-        // Show sheets section and load sheets
         document.getElementById('sheetsSection').style.display = 'block';
         loadUserSheets();
     } catch (error) {
@@ -242,15 +241,6 @@ function selectSheet(sheetId, sheetName) {
     localStorage.setItem('mealLogger_sheetId', sheetId);
     localStorage.setItem('mealLogger_sheetName', sheetName);
 
-    // Update UI
-    document.querySelectorAll('.sheet-option').forEach(el => {
-        el.classList.remove('selected');
-        if (el.onclick.toString().includes(sheetId)) {
-            el.classList.add('selected');
-        }
-    });
-
-    // Re-render to update selection
     loadUserSheets();
     updateSheetButtons();
     updateSyncStatus('synced', sheetName);
@@ -287,13 +277,13 @@ async function createNewSheet() {
         const sheetId = response.result.spreadsheetId;
         const sheetName = response.result.properties.title;
 
-        // Add headers
+        // Add headers with sugar field
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: sheetId,
-            range: 'Meals!A1:I1',
+            range: 'Meals!A1:J1',
             valueInputOption: 'RAW',
             resource: {
-                values: [['ID', 'Date', 'Name', 'Type', 'Calories', 'Protein', 'Carbs', 'Fat', 'Notes']]
+                values: [['ID', 'Date', 'Name', 'Type', 'Calories', 'Protein', 'Carbs', 'Fat', 'Sugar', 'Notes']]
             }
         });
 
@@ -305,7 +295,6 @@ async function createNewSheet() {
         loadUserSheets();
         updateSyncStatus('synced', sheetName);
 
-        // Sync current data to the new sheet
         await syncToSheet();
     } catch (error) {
         console.error('Error creating sheet:', error);
@@ -320,17 +309,14 @@ async function syncToSheet() {
     try {
         updateSyncStatus('syncing');
 
-        // Get all meals from local DB
         const allMeals = await getAllMeals();
 
-        // Clear existing data (except header)
         await gapi.client.sheets.spreadsheets.values.clear({
             spreadsheetId: selectedSheetId,
-            range: 'Meals!A2:I10000'
+            range: 'Meals!A2:J10000'
         });
 
         if (allMeals.length > 0) {
-            // Format meals for sheets
             const rows = allMeals.map(meal => [
                 meal.id || '',
                 meal.date || '',
@@ -340,10 +326,10 @@ async function syncToSheet() {
                 meal.protein || 0,
                 meal.carbs || 0,
                 meal.fat || 0,
+                meal.sugar || 0,
                 meal.notes || ''
             ]);
 
-            // Write data
             await gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: selectedSheetId,
                 range: 'Meals!A2',
@@ -370,7 +356,7 @@ async function loadFromSheet() {
 
         const response = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: selectedSheetId,
-            range: 'Meals!A2:I10000'
+            range: 'Meals!A2:J10000'
         });
 
         const rows = response.result.values || [];
@@ -381,13 +367,11 @@ async function loadFromSheet() {
             return;
         }
 
-        // Clear local database
         await clearAllMeals();
 
-        // Import meals
         let importCount = 0;
         for (const row of rows) {
-            if (row[2]) { // Has name
+            if (row[2]) {
                 const meal = {
                     date: row[1] || formatDate(new Date()),
                     name: row[2] || '',
@@ -396,7 +380,8 @@ async function loadFromSheet() {
                     protein: parseInt(row[5]) || 0,
                     carbs: parseInt(row[6]) || 0,
                     fat: parseInt(row[7]) || 0,
-                    notes: row[8] || '',
+                    sugar: parseInt(row[8]) || 0,
+                    notes: row[9] || '',
                     timestamp: new Date().toISOString()
                 };
                 await addMeal(meal);
@@ -590,6 +575,7 @@ async function loadMeals() {
     const meals = await getMealsByDate(currentDate);
     renderMeals(meals);
     updateSummary(meals);
+    updateDailyAnalytics(meals);
 }
 
 function renderMeals(meals) {
@@ -605,7 +591,6 @@ function renderMeals(meals) {
 
     emptyState.style.display = 'none';
 
-    // Group meals by type
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     const groupedMeals = {};
 
@@ -635,6 +620,7 @@ function renderMealCard(meal) {
     if (meal.protein) macros.push(`${meal.protein}g P`);
     if (meal.carbs) macros.push(`${meal.carbs}g C`);
     if (meal.fat) macros.push(`${meal.fat}g F`);
+    if (meal.sugar) macros.push(`${meal.sugar}g S`);
 
     return `
         <div class="meal-card" data-id="${meal.id}">
@@ -663,13 +649,119 @@ function updateSummary(meals) {
         acc.protein += meal.protein || 0;
         acc.carbs += meal.carbs || 0;
         acc.fat += meal.fat || 0;
+        acc.sugar += meal.sugar || 0;
         return acc;
-    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 });
 
     document.getElementById('totalCalories').textContent = totals.calories;
     document.getElementById('totalProtein').textContent = `${totals.protein}g`;
     document.getElementById('totalCarbs').textContent = `${totals.carbs}g`;
     document.getElementById('totalFat').textContent = `${totals.fat}g`;
+    document.getElementById('totalSugar').textContent = `${totals.sugar}g`;
+}
+
+// Analytics functions
+function updateDailyAnalytics(meals) {
+    const totals = meals.reduce((acc, meal) => {
+        acc.calories += meal.calories || 0;
+        acc.protein += meal.protein || 0;
+        acc.carbs += meal.carbs || 0;
+        acc.fat += meal.fat || 0;
+        acc.sugar += meal.sugar || 0;
+        return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 });
+
+    // Update big number
+    document.getElementById('analyticsDailyCalories').textContent = totals.calories;
+
+    // Update macro bars
+    const maxMacro = Math.max(totals.protein, totals.carbs, totals.fat, totals.sugar, 1);
+
+    document.getElementById('proteinBar').style.width = `${(totals.protein / maxMacro) * 100}%`;
+    document.getElementById('proteinBarValue').textContent = `${totals.protein}g`;
+
+    document.getElementById('carbsBar').style.width = `${(totals.carbs / maxMacro) * 100}%`;
+    document.getElementById('carbsBarValue').textContent = `${totals.carbs}g`;
+
+    document.getElementById('fatBar').style.width = `${(totals.fat / maxMacro) * 100}%`;
+    document.getElementById('fatBarValue').textContent = `${totals.fat}g`;
+
+    document.getElementById('sugarBar').style.width = `${(totals.sugar / maxMacro) * 100}%`;
+    document.getElementById('sugarBarValue').textContent = `${totals.sugar}g`;
+
+    // Update meals by type count
+    const typeCounts = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+    meals.forEach(meal => {
+        if (typeCounts[meal.type] !== undefined) {
+            typeCounts[meal.type]++;
+        }
+    });
+
+    document.getElementById('breakfastCount').textContent = typeCounts.breakfast;
+    document.getElementById('lunchCount').textContent = typeCounts.lunch;
+    document.getElementById('dinnerCount').textContent = typeCounts.dinner;
+    document.getElementById('snackCount').textContent = typeCounts.snack;
+}
+
+async function updateWeeklyAnalytics() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const allMeals = await getAllMeals();
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekData = [];
+
+    let totalCalories = 0;
+    let totalMeals = 0;
+    let totalProtein = 0;
+    let totalSugar = 0;
+    let daysWithData = 0;
+
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(startOfWeek);
+        date.setDate(startOfWeek.getDate() + i);
+        const dateStr = formatDate(date);
+
+        const dayMeals = allMeals.filter(m => m.date === dateStr);
+        const dayCalories = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+        const dayProtein = dayMeals.reduce((sum, m) => sum + (m.protein || 0), 0);
+        const daySugar = dayMeals.reduce((sum, m) => sum + (m.sugar || 0), 0);
+
+        weekData.push({
+            day: weekDays[i],
+            calories: dayCalories,
+            isToday: formatDate(date) === formatDate(today),
+            hasData: dayMeals.length > 0
+        });
+
+        totalCalories += dayCalories;
+        totalMeals += dayMeals.length;
+        totalProtein += dayProtein;
+        totalSugar += daySugar;
+        if (dayMeals.length > 0) daysWithData++;
+    }
+
+    // Update weekly average
+    const avgCalories = daysWithData > 0 ? Math.round(totalCalories / daysWithData) : 0;
+    document.getElementById('weeklyAvgCalories').textContent = avgCalories;
+
+    // Update week day grid
+    const gridHtml = weekData.map(day => `
+        <div class="week-day ${day.isToday ? 'today' : ''} ${day.hasData ? 'has-data' : ''}">
+            <div class="week-day-name">${day.day}</div>
+            <div class="week-day-value">${day.calories}</div>
+        </div>
+    `).join('');
+    document.getElementById('weekDayGrid').innerHTML = gridHtml;
+
+    // Update weekly totals
+    document.getElementById('weeklyTotalCalories').textContent = totalCalories;
+    document.getElementById('weeklyTotalMeals').textContent = totalMeals;
+    document.getElementById('weeklyTotalProtein').textContent = `${totalProtein}g`;
+    document.getElementById('weeklyTotalSugar').textContent = `${totalSugar}g`;
 }
 
 // Modal handling
@@ -677,12 +769,17 @@ function openModal(isEdit = false) {
     document.getElementById('modalOverlay').classList.add('active');
     document.getElementById('modalTitle').textContent = isEdit ? 'Edit Meal' : 'Add Meal';
     document.getElementById('submitBtn').textContent = isEdit ? 'Save Changes' : 'Add Meal';
+
+    if (!isEdit) {
+        document.getElementById('calories').value = 0;
+    }
 }
 
 function closeModal() {
     document.getElementById('modalOverlay').classList.remove('active');
     document.getElementById('mealForm').reset();
     document.getElementById('mealId').value = '';
+    document.getElementById('calories').value = 0;
 }
 
 function openSettings() {
@@ -699,10 +796,11 @@ async function editMeal(id) {
         document.getElementById('mealId').value = meal.id;
         document.getElementById('mealName').value = meal.name;
         document.getElementById('mealType').value = meal.type;
-        document.getElementById('calories').value = meal.calories || '';
+        document.getElementById('calories').value = meal.calories || 0;
         document.getElementById('protein').value = meal.protein || '';
         document.getElementById('carbs').value = meal.carbs || '';
         document.getElementById('fat').value = meal.fat || '';
+        document.getElementById('sugar').value = meal.sugar || '';
         document.getElementById('notes').value = meal.notes || '';
         openModal(true);
     }
@@ -713,7 +811,6 @@ async function confirmDelete(id) {
         await deleteMeal(id);
         await loadMeals();
 
-        // Auto-sync if connected
         if (selectedSheetId && accessToken) {
             syncToSheet();
         }
@@ -732,6 +829,7 @@ async function handleSubmit(e) {
         protein: parseInt(document.getElementById('protein').value) || 0,
         carbs: parseInt(document.getElementById('carbs').value) || 0,
         fat: parseInt(document.getElementById('fat').value) || 0,
+        sugar: parseInt(document.getElementById('sugar').value) || 0,
         notes: document.getElementById('notes').value.trim(),
         date: formatDate(currentDate),
         timestamp: new Date().toISOString()
@@ -747,9 +845,36 @@ async function handleSubmit(e) {
     closeModal();
     await loadMeals();
 
-    // Auto-sync if connected
     if (selectedSheetId && accessToken) {
         syncToSheet();
+    }
+}
+
+// Tab handling
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === tabName + 'Tab');
+    });
+
+    if (tabName === 'analytics') {
+        updateWeeklyAnalytics();
+    }
+}
+
+function switchAnalyticsSubTab(subtabName) {
+    document.querySelectorAll('.analytics-sub-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.subtab === subtabName);
+    });
+
+    document.getElementById('dailyAnalytics').style.display = subtabName === 'daily' ? 'block' : 'none';
+    document.getElementById('weeklyAnalytics').style.display = subtabName === 'weekly' ? 'block' : 'none';
+
+    if (subtabName === 'weekly') {
+        updateWeeklyAnalytics();
     }
 }
 
@@ -768,6 +893,16 @@ function setupEventListeners() {
         loadMeals();
     });
 
+    // Tab navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Analytics sub-tabs
+    document.querySelectorAll('.analytics-sub-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchAnalyticsSubTab(btn.dataset.subtab));
+    });
+
     // Modal
     document.getElementById('addMealBtn').addEventListener('click', () => openModal());
     document.getElementById('closeModal').addEventListener('click', closeModal);
@@ -775,6 +910,11 @@ function setupEventListeners() {
         if (e.target === document.getElementById('modalOverlay')) {
             closeModal();
         }
+    });
+
+    // Auto-calculate calories when macros change
+    ['protein', 'carbs', 'fat'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calculateCalories);
     });
 
     // Settings
@@ -799,7 +939,6 @@ function setupEventListeners() {
         e.preventDefault();
         deferredPrompt = e;
 
-        // Show install prompt after a delay
         setTimeout(() => {
             if (deferredPrompt) {
                 document.getElementById('installPrompt').classList.add('show');

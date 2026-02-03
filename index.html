@@ -129,6 +129,42 @@
             50% { opacity: 0.5; }
         }
 
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: white;
+            margin: 15px 15px 0;
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .summary {
             background: white;
             margin: 15px;
@@ -145,8 +181,8 @@
 
         .summary-stats {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
             text-align: center;
         }
 
@@ -157,13 +193,13 @@
         }
 
         .stat-value {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #4CAF50;
         }
 
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #666;
             margin-top: 2px;
         }
@@ -355,6 +391,11 @@
             border-color: #4CAF50;
         }
 
+        .form-group input:read-only {
+            background: #f5f5f5;
+            color: #666;
+        }
+
         .form-group textarea {
             resize: vertical;
             min-height: 80px;
@@ -362,12 +403,23 @@
 
         .macro-inputs {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
         }
 
         .macro-inputs .form-group {
             margin-bottom: 0;
+        }
+
+        .calories-display {
+            background: #e8f5e9;
+            border-color: #4CAF50 !important;
+        }
+
+        .calories-hint {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 5px;
         }
 
         .submit-btn {
@@ -658,6 +710,193 @@
             padding: 20px;
             color: #666;
         }
+
+        /* Analytics Styles */
+        .analytics-container {
+            padding: 15px;
+        }
+
+        .analytics-sub-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .analytics-sub-tab {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .analytics-sub-tab.active {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        .analytics-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .analytics-card h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .analytics-big-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+
+        .analytics-label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .analytics-stat {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .analytics-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .analytics-stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .chart-bar-container {
+            margin-top: 15px;
+        }
+
+        .chart-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .chart-bar-label {
+            width: 80px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .chart-bar-track {
+            flex: 1;
+            height: 24px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .chart-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            border-radius: 12px;
+            transition: width 0.3s ease;
+        }
+
+        .chart-bar-fill.protein { background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); }
+        .chart-bar-fill.carbs { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); }
+        .chart-bar-fill.fat { background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); }
+        .chart-bar-fill.sugar { background: linear-gradient(135deg, #E91E63 0%, #C2185B 100%); }
+
+        .chart-bar-value {
+            width: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #333;
+            text-align: right;
+        }
+
+        .week-day-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .week-day {
+            text-align: center;
+            padding: 10px 5px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .week-day-name {
+            font-size: 0.7rem;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .week-day-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .week-day.today {
+            background: #e8f5e9;
+            border: 2px solid #4CAF50;
+        }
+
+        .week-day.has-data {
+            background: #e3f2fd;
+        }
+
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+
+        .trend-up {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .trend-down {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .trend-neutral {
+            background: #f5f5f5;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -682,35 +921,164 @@
         </div>
     </header>
 
-    <section class="summary">
-        <h3>Daily Summary</h3>
-        <div class="summary-stats">
-            <div class="stat">
-                <div class="stat-value" id="totalCalories">0</div>
-                <div class="stat-label">Calories</div>
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <button class="tab-btn active" data-tab="meals">Meals</button>
+        <button class="tab-btn" data-tab="analytics">Analytics</button>
+    </div>
+
+    <!-- Meals Tab -->
+    <div id="mealsTab" class="tab-content active">
+        <section class="summary">
+            <h3>Daily Summary</h3>
+            <div class="summary-stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalCalories">0</div>
+                    <div class="stat-label">Calories</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalProtein">0g</div>
+                    <div class="stat-label">Protein</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalCarbs">0g</div>
+                    <div class="stat-label">Carbs</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalFat">0g</div>
+                    <div class="stat-label">Fat</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalSugar">0g</div>
+                    <div class="stat-label">Sugar</div>
+                </div>
             </div>
-            <div class="stat">
-                <div class="stat-value" id="totalProtein">0g</div>
-                <div class="stat-label">Protein</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="totalCarbs">0g</div>
-                <div class="stat-label">Carbs</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="totalFat">0g</div>
-                <div class="stat-label">Fat</div>
+        </section>
+
+        <div class="meals-container" id="mealsContainer">
+            <div class="empty-state" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05l-5 2.18V22.99h.06zM1 21.99V8.97l5-2.19v15.21l-5 .00zM11 2L6.49 4.18v16.82L11 22.99 15.51 21V4.18L11 2zm3.51 6.03l-3.51 1.54-3.51-1.54v-2l3.51 1.54 3.51-1.54v2z"/>
+                </svg>
+                <p>No meals logged today</p>
+                <p>Tap + to add your first meal</p>
             </div>
         </div>
-    </section>
+    </div>
 
-    <div class="meals-container" id="mealsContainer">
-        <div class="empty-state" id="emptyState">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05l-5 2.18V22.99h.06zM1 21.99V8.97l5-2.19v15.21l-5 .00zM11 2L6.49 4.18v16.82L11 22.99 15.51 21V4.18L11 2zm3.51 6.03l-3.51 1.54-3.51-1.54v-2l3.51 1.54 3.51-1.54v2z"/>
-            </svg>
-            <p>No meals logged today</p>
-            <p>Tap + to add your first meal</p>
+    <!-- Analytics Tab -->
+    <div id="analyticsTab" class="tab-content">
+        <div class="analytics-container">
+            <div class="analytics-sub-tabs">
+                <button class="analytics-sub-tab active" data-subtab="daily">Daily</button>
+                <button class="analytics-sub-tab" data-subtab="weekly">Weekly</button>
+            </div>
+
+            <!-- Daily Analytics -->
+            <div id="dailyAnalytics" class="analytics-subtab-content">
+                <div class="analytics-card">
+                    <h3>Today's Intake</h3>
+                    <div class="analytics-big-number" id="analyticsDailyCalories">0</div>
+                    <div class="analytics-label">calories consumed</div>
+                </div>
+
+                <div class="analytics-card">
+                    <h3>Macro Breakdown</h3>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar">
+                            <span class="chart-bar-label">Protein</span>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill protein" id="proteinBar" style="width: 0%"></div>
+                            </div>
+                            <span class="chart-bar-value" id="proteinBarValue">0g</span>
+                        </div>
+                        <div class="chart-bar">
+                            <span class="chart-bar-label">Carbs</span>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill carbs" id="carbsBar" style="width: 0%"></div>
+                            </div>
+                            <span class="chart-bar-value" id="carbsBarValue">0g</span>
+                        </div>
+                        <div class="chart-bar">
+                            <span class="chart-bar-label">Fat</span>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fat" id="fatBar" style="width: 0%"></div>
+                            </div>
+                            <span class="chart-bar-value" id="fatBarValue">0g</span>
+                        </div>
+                        <div class="chart-bar">
+                            <span class="chart-bar-label">Sugar</span>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill sugar" id="sugarBar" style="width: 0%"></div>
+                            </div>
+                            <span class="chart-bar-value" id="sugarBarValue">0g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <h3>Meals by Type</h3>
+                    <div class="analytics-grid" id="mealsByType">
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="breakfastCount">0</div>
+                            <div class="analytics-stat-label">Breakfast</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="lunchCount">0</div>
+                            <div class="analytics-stat-label">Lunch</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="dinnerCount">0</div>
+                            <div class="analytics-stat-label">Dinner</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="snackCount">0</div>
+                            <div class="analytics-stat-label">Snacks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Analytics -->
+            <div id="weeklyAnalytics" class="analytics-subtab-content" style="display: none;">
+                <div class="analytics-card">
+                    <h3>Weekly Average</h3>
+                    <div class="analytics-big-number" id="weeklyAvgCalories">0</div>
+                    <div class="analytics-label">
+                        avg calories/day
+                        <span class="trend-indicator trend-neutral" id="weeklyTrend">-</span>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <h3>This Week's Calories</h3>
+                    <div class="week-day-grid" id="weekDayGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <h3>Weekly Totals</h3>
+                    <div class="analytics-grid">
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="weeklyTotalCalories">0</div>
+                            <div class="analytics-stat-label">Total Calories</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="weeklyTotalMeals">0</div>
+                            <div class="analytics-stat-label">Total Meals</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="weeklyTotalProtein">0g</div>
+                            <div class="analytics-stat-label">Total Protein</div>
+                        </div>
+                        <div class="analytics-stat">
+                            <div class="analytics-stat-value" id="weeklyTotalSugar">0g</div>
+                            <div class="analytics-stat-label">Total Sugar</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -739,8 +1107,9 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="calories">Calories</label>
-                    <input type="number" id="calories" placeholder="0" min="0">
+                    <label for="calories">Calories (auto-calculated)</label>
+                    <input type="number" id="calories" class="calories-display" placeholder="0" min="0" readonly>
+                    <div class="calories-hint">Protein & Carbs = 4 cal/g, Fat = 9 cal/g</div>
                 </div>
                 <div class="macro-inputs">
                     <div class="form-group">
@@ -754,6 +1123,10 @@
                     <div class="form-group">
                         <label for="fat">Fat (g)</label>
                         <input type="number" id="fat" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="sugar">Sugar (g)</label>
+                        <input type="number" id="sugar" placeholder="0" min="0">
                     </div>
                 </div>
                 <div class="form-group">
