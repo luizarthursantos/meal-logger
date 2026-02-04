@@ -799,22 +799,23 @@ async function loadMeals() {
 
 function renderMeals(meals) {
     const container = document.getElementById('mealsContainer');
-    const emptyState = document.getElementById('emptyState');
+
+    if (!container) {
+        console.error('mealsContainer not found');
+        return;
+    }
 
     if (meals.length === 0) {
-        container.innerHTML = '';
-        const newEmptyState = document.createElement('div');
-        newEmptyState.className = 'empty-state';
-        newEmptyState.id = 'emptyState';
-        newEmptyState.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05l-5 2.18V22.99h.06zM1 21.99V8.97l5-2.19v15.21l-5 .00zM11 2L6.49 4.18v16.82L11 22.99 15.51 21V4.18L11 2zm3.51 6.03l-3.51 1.54-3.51-1.54v-2l3.51 1.54 3.51-1.54v2z"/>
-            </svg>
-            <p>No meals logged for this day</p>
-            <p style="font-size: 0.85rem;">Tap + to add your first meal</p>
+        // Use innerHTML instead of appendChild for Safari compatibility
+        container.innerHTML = `
+            <div class="empty-state" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05l-5 2.18V22.99h.06zM1 21.99V8.97l5-2.19v15.21l-5 .00zM11 2L6.49 4.18v16.82L11 22.99 15.51 21V4.18L11 2zm3.51 6.03l-3.51 1.54-3.51-1.54v-2l3.51 1.54 3.51-1.54v2z"/>
+                </svg>
+                <p>No meals logged for this day</p>
+                <p style="font-size: 0.85rem;">Tap + to add your first meal</p>
+            </div>
         `;
-        container.innerHTML = '';
-        container.appendChild(newEmptyState);
         return;
     }
 
