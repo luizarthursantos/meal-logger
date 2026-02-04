@@ -19,6 +19,15 @@ let accessToken = null;
 let googleUser = null;
 let selectedSheetId = null;
 
+// Sync state
+let isSyncing = false;
+let pendingConflicts = [];
+
+// Generate a unique sync ID for meals
+function generateSyncId() {
+    return 'meal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
     await initDB();
@@ -173,6 +182,12 @@ async function tryRestoreSession() {
             const savedSheetName = localStorage.getItem('mealLogger_sheetName');
             if (selectedSheetId && savedSheetName) {
                 updateSyncStatus('synced', savedSheetName);
+
+                // Auto-sync on app open - pull changes from Google Sheets
+                console.log('Auto-syncing on app open...');
+                setTimeout(() => {
+                    smartSync();
+                }, 1000); // Small delay to ensure everything is loaded
             }
         } else {
             // Token expired, clear it
@@ -358,6 +373,11 @@ function selectSheet(sheetId, sheetName) {
     loadUserSheets();
     updateSheetButtons();
     updateSyncStatus('synced', sheetName);
+
+    // Auto-sync when a sheet is selected
+    setTimeout(() => {
+        smartSync();
+    }, 500);
 }
 
 function updateSheetButtons() {
@@ -425,9 +445,19 @@ async function syncToSheet() {
 
         const allMeals = await getAllMeals();
 
+        // Update headers to include new sync fields
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: selectedSheetId,
+            range: 'Meals!A1:L1',
+            valueInputOption: 'RAW',
+            resource: {
+                values: [['ID', 'Date', 'Name', 'Type', 'Calories', 'Protein', 'Carbs', 'Fat', 'Sugar', 'Notes', 'SyncId', 'ModifiedAt']]
+            }
+        });
+
         await gapi.client.sheets.spreadsheets.values.clear({
             spreadsheetId: selectedSheetId,
-            range: 'Meals!A2:J10000'
+            range: 'Meals!A2:L10000'
         });
 
         if (allMeals.length > 0) {
@@ -441,7 +471,9 @@ async function syncToSheet() {
                 meal.carbs || 0,
                 meal.fat || 0,
                 meal.sugar || 0,
-                meal.notes || ''
+                meal.notes || '',
+                meal.syncId || generateSyncId(),
+                meal.modifiedAt || new Date().toISOString()
             ]);
 
             await gapi.client.sheets.spreadsheets.values.update({
@@ -451,6 +483,9 @@ async function syncToSheet() {
                 resource: { values: rows }
             });
         }
+
+        // Save last sync time
+        localStorage.setItem('mealLogger_lastSync', new Date().toISOString());
 
         const sheetName = localStorage.getItem('mealLogger_sheetName') || 'Google Sheets';
         updateSyncStatus('synced', sheetName);
@@ -462,6 +497,323 @@ async function syncToSheet() {
     }
 }
 
+// Smart sync with conflict detection
+async function smartSync() {
+    if (!selectedSheetId || !accessToken || isSyncing) return;
+
+    isSyncing = true;
+
+    try {
+        updateSyncStatus('syncing');
+
+        // Get local meals
+        const localMeals = await getAllMeals();
+
+        // Get remote meals from Google Sheet
+        let remoteMeals = [];
+        try {
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: selectedSheetId,
+                range: 'Meals!A2:L10000'
+            });
+
+            const rows = response.result.values || [];
+            remoteMeals = rows.map(row => ({
+                id: parseInt(row[0]) || null,
+                date: row[1] || '',
+                name: row[2] || '',
+                type: row[3] || 'snack',
+                calories: parseInt(row[4]) || 0,
+                protein: parseInt(row[5]) || 0,
+                carbs: parseInt(row[6]) || 0,
+                fat: parseInt(row[7]) || 0,
+                sugar: parseInt(row[8]) || 0,
+                notes: row[9] || '',
+                syncId: row[10] || null,
+                modifiedAt: row[11] || null
+            })).filter(meal => meal.name); // Filter out empty rows
+        } catch (error) {
+            console.log('No existing data in sheet or sheet is new');
+        }
+
+        // Build maps for comparison
+        const localBySyncId = new Map();
+        const localWithoutSyncId = [];
+
+        localMeals.forEach(meal => {
+            if (meal.syncId) {
+                localBySyncId.set(meal.syncId, meal);
+            } else {
+                localWithoutSyncId.push(meal);
+            }
+        });
+
+        const remoteBySyncId = new Map();
+        remoteMeals.forEach(meal => {
+            if (meal.syncId) {
+                remoteBySyncId.set(meal.syncId, meal);
+            }
+        });
+
+        // Detect conflicts and changes
+        const conflicts = [];
+        const newFromRemote = [];
+        const localOnlyMeals = [];
+
+        // Check for conflicts and new remote meals
+        for (const [syncId, remoteMeal] of remoteBySyncId) {
+            const localMeal = localBySyncId.get(syncId);
+
+            if (localMeal) {
+                // Both have this meal - check for conflicts
+                const localModified = localMeal.modifiedAt ? new Date(localMeal.modifiedAt).getTime() : 0;
+                const remoteModified = remoteMeal.modifiedAt ? new Date(remoteMeal.modifiedAt).getTime() : 0;
+
+                // Check if content actually differs
+                if (mealsAreDifferent(localMeal, remoteMeal)) {
+                    if (localModified !== remoteModified) {
+                        conflicts.push({ local: localMeal, remote: remoteMeal });
+                    }
+                }
+            } else {
+                // New meal from remote
+                newFromRemote.push(remoteMeal);
+            }
+        }
+
+        // Find meals that only exist locally
+        for (const [syncId, localMeal] of localBySyncId) {
+            if (!remoteBySyncId.has(syncId)) {
+                localOnlyMeals.push(localMeal);
+            }
+        }
+
+        // Also include meals without syncId as local-only
+        localWithoutSyncId.forEach(meal => localOnlyMeals.push(meal));
+
+        // If there are conflicts, show conflict resolution UI
+        if (conflicts.length > 0) {
+            pendingConflicts = conflicts;
+            showConflictModal(conflicts, newFromRemote, localOnlyMeals);
+            isSyncing = false;
+            return;
+        }
+
+        // No conflicts - merge automatically
+        await performMerge(newFromRemote, localOnlyMeals, []);
+
+    } catch (error) {
+        console.error('Smart sync error:', error);
+        updateSyncStatus('error');
+        showToast('Sync failed', 'error');
+    }
+
+    isSyncing = false;
+}
+
+// Check if two meals have different content
+function mealsAreDifferent(meal1, meal2) {
+    return meal1.name !== meal2.name ||
+           meal1.type !== meal2.type ||
+           meal1.date !== meal2.date ||
+           meal1.calories !== meal2.calories ||
+           meal1.protein !== meal2.protein ||
+           meal1.carbs !== meal2.carbs ||
+           meal1.fat !== meal2.fat ||
+           meal1.sugar !== meal2.sugar ||
+           meal1.notes !== meal2.notes;
+}
+
+// Perform the actual merge operation
+async function performMerge(newFromRemote, localOnlyMeals, resolvedConflicts) {
+    try {
+        updateSyncStatus('syncing', 'Merging...');
+
+        // Add new meals from remote to local DB
+        for (const remoteMeal of newFromRemote) {
+            const meal = {
+                ...remoteMeal,
+                id: undefined, // Let IndexedDB assign new ID
+                timestamp: new Date().toISOString()
+            };
+            delete meal.id;
+            await addMeal(meal);
+        }
+
+        // Ensure all local meals have syncId and modifiedAt
+        const allLocalMeals = await getAllMeals();
+        for (const meal of allLocalMeals) {
+            if (!meal.syncId || !meal.modifiedAt) {
+                meal.syncId = meal.syncId || generateSyncId();
+                meal.modifiedAt = meal.modifiedAt || new Date().toISOString();
+                await updateMeal(meal);
+            }
+        }
+
+        // Apply conflict resolutions
+        for (const resolution of resolvedConflicts) {
+            if (resolution.choice === 'remote') {
+                // Update local with remote data
+                const localMeal = await getMealBySyncId(resolution.syncId);
+                if (localMeal) {
+                    const updatedMeal = {
+                        ...resolution.remote,
+                        id: localMeal.id,
+                        timestamp: new Date().toISOString()
+                    };
+                    await updateMeal(updatedMeal);
+                }
+            }
+            // If choice is 'local', we keep local data (no action needed)
+        }
+
+        // Now sync everything back to Google Sheets
+        await syncToSheet();
+
+        // Reload meals display
+        await loadMeals();
+
+        const sheetName = localStorage.getItem('mealLogger_sheetName') || 'Google Sheets';
+        updateSyncStatus('synced', sheetName);
+
+        if (newFromRemote.length > 0) {
+            showToast(`Synced: ${newFromRemote.length} new meal(s) from cloud`, 'success');
+        } else {
+            showToast('Synced with Google Sheets', 'success');
+        }
+
+    } catch (error) {
+        console.error('Merge error:', error);
+        updateSyncStatus('error');
+        showToast('Merge failed', 'error');
+    } finally {
+        isSyncing = false;
+    }
+}
+
+// Get meal by syncId
+function getMealBySyncId(syncId) {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            resolve(null);
+            return;
+        }
+
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.openCursor();
+
+        request.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                if (cursor.value.syncId === syncId) {
+                    resolve(cursor.value);
+                    return;
+                }
+                cursor.continue();
+            } else {
+                resolve(null);
+            }
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// Show conflict resolution modal
+function showConflictModal(conflicts, newFromRemote, localOnlyMeals) {
+    const overlay = document.getElementById('conflictOverlay');
+    const container = document.getElementById('conflictList');
+
+    let html = `
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            Found ${conflicts.length} meal(s) that were modified on both this device and another device.
+            Choose which version to keep for each:
+        </p>
+    `;
+
+    conflicts.forEach((conflict, index) => {
+        const localDate = conflict.local.modifiedAt ? new Date(conflict.local.modifiedAt).toLocaleString() : 'Unknown';
+        const remoteDate = conflict.remote.modifiedAt ? new Date(conflict.remote.modifiedAt).toLocaleString() : 'Unknown';
+
+        html += `
+            <div class="conflict-item" data-index="${index}" data-syncid="${conflict.local.syncId}">
+                <div class="conflict-meal-name">${escapeHtml(conflict.local.name)}</div>
+                <div class="conflict-options">
+                    <label class="conflict-option">
+                        <input type="radio" name="conflict_${index}" value="local" checked>
+                        <div class="conflict-option-content">
+                            <div class="conflict-option-header">
+                                <span class="conflict-badge local">This Device</span>
+                                <span class="conflict-time">${localDate}</span>
+                            </div>
+                            <div class="conflict-details">
+                                ${conflict.local.calories} cal • ${conflict.local.protein}g P • ${conflict.local.carbs}g C • ${conflict.local.fat}g F
+                            </div>
+                        </div>
+                    </label>
+                    <label class="conflict-option">
+                        <input type="radio" name="conflict_${index}" value="remote">
+                        <div class="conflict-option-content">
+                            <div class="conflict-option-header">
+                                <span class="conflict-badge remote">Cloud</span>
+                                <span class="conflict-time">${remoteDate}</span>
+                            </div>
+                            <div class="conflict-details">
+                                ${conflict.remote.calories} cal • ${conflict.remote.protein}g P • ${conflict.remote.carbs}g C • ${conflict.remote.fat}g F
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Store data for resolution
+    overlay.dataset.conflicts = JSON.stringify(conflicts);
+    overlay.dataset.newFromRemote = JSON.stringify(newFromRemote);
+    overlay.dataset.localOnlyMeals = JSON.stringify(localOnlyMeals);
+
+    overlay.classList.add('active');
+}
+
+// Resolve conflicts and continue sync
+async function resolveConflicts() {
+    const overlay = document.getElementById('conflictOverlay');
+    const conflicts = JSON.parse(overlay.dataset.conflicts || '[]');
+    const newFromRemote = JSON.parse(overlay.dataset.newFromRemote || '[]');
+    const localOnlyMeals = JSON.parse(overlay.dataset.localOnlyMeals || '[]');
+
+    const resolvedConflicts = [];
+
+    conflicts.forEach((conflict, index) => {
+        const choice = document.querySelector(`input[name="conflict_${index}"]:checked`).value;
+        resolvedConflicts.push({
+            syncId: conflict.local.syncId,
+            choice: choice,
+            local: conflict.local,
+            remote: conflict.remote
+        });
+    });
+
+    overlay.classList.remove('active');
+
+    // Perform the merge with resolved conflicts
+    await performMerge(newFromRemote, localOnlyMeals, resolvedConflicts);
+}
+
+// Cancel conflict resolution - keep local data only
+function cancelConflictResolution() {
+    const overlay = document.getElementById('conflictOverlay');
+    overlay.classList.remove('active');
+    isSyncing = false;
+
+    updateSyncStatus('synced', localStorage.getItem('mealLogger_sheetName') || 'Google Sheets');
+    showToast('Sync cancelled - local data unchanged', 'success');
+}
+
 async function loadFromSheet() {
     if (!selectedSheetId || !accessToken) return;
 
@@ -470,7 +822,7 @@ async function loadFromSheet() {
 
         const response = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: selectedSheetId,
-            range: 'Meals!A2:J10000'
+            range: 'Meals!A2:L10000'
         });
 
         const rows = response.result.values || [];
@@ -496,6 +848,8 @@ async function loadFromSheet() {
                     fat: parseInt(row[7]) || 0,
                     sugar: parseInt(row[8]) || 0,
                     notes: row[9] || '',
+                    syncId: row[10] || generateSyncId(),
+                    modifiedAt: row[11] || new Date().toISOString(),
                     timestamp: new Date().toISOString()
                 };
                 await addMeal(meal);
@@ -504,6 +858,7 @@ async function loadFromSheet() {
         }
 
         await loadMeals();
+        localStorage.setItem('mealLogger_lastSync', new Date().toISOString());
         const sheetName = localStorage.getItem('mealLogger_sheetName') || 'Google Sheets';
         updateSyncStatus('synced', sheetName);
         showToast(`Loaded ${importCount} meals`, 'success');
@@ -1043,8 +1398,9 @@ async function confirmDelete(id) {
         await deleteMeal(id);
         await loadMeals();
 
+        // Auto-sync to Google Sheets
         if (selectedSheetId && accessToken) {
-            syncToSheet();
+            smartSync();
         }
     }
 }
@@ -1054,6 +1410,8 @@ async function handleSubmit(e) {
     e.preventDefault();
 
     const id = document.getElementById('mealId').value;
+    const now = new Date().toISOString();
+
     const meal = {
         name: document.getElementById('mealName').value.trim(),
         type: document.getElementById('mealType').value,
@@ -1064,21 +1422,28 @@ async function handleSubmit(e) {
         sugar: parseInt(document.getElementById('sugar').value) || 0,
         notes: document.getElementById('notes').value.trim(),
         date: formatDate(currentDate),
-        timestamp: new Date().toISOString()
+        timestamp: now,
+        modifiedAt: now
     };
 
     if (id) {
+        // Preserve syncId when editing
+        const existingMeal = await getMealById(parseInt(id));
         meal.id = parseInt(id);
+        meal.syncId = existingMeal?.syncId || generateSyncId();
         await updateMeal(meal);
     } else {
+        // Generate new syncId for new meals
+        meal.syncId = generateSyncId();
         await addMeal(meal);
     }
 
     closeModal();
     await loadMeals();
 
+    // Auto-sync to Google Sheets
     if (selectedSheetId && accessToken) {
-        syncToSheet();
+        smartSync();
     }
 }
 
@@ -1139,7 +1504,7 @@ function setupEventListeners() {
     // Sheet actions
     document.getElementById('createNewSheet').addEventListener('click', createNewSheet);
     document.getElementById('loadFromSheet').addEventListener('click', loadFromSheet);
-    document.getElementById('syncNowBtn').addEventListener('click', syncToSheet);
+    document.getElementById('syncNowBtn').addEventListener('click', smartSync);
 
     // Form
     document.getElementById('mealForm').addEventListener('submit', handleSubmit);
@@ -1200,6 +1565,9 @@ window.selectSheet = selectSheet;
 window.createNewSheet = createNewSheet;
 window.loadFromSheet = loadFromSheet;
 window.syncToSheet = syncToSheet;
+window.smartSync = smartSync;
+window.resolveConflicts = resolveConflicts;
+window.cancelConflictResolution = cancelConflictResolution;
 window.calculateCalories = calculateCalories;
 window.switchTab = switchTab;
 window.switchAnalyticsSubTab = switchAnalyticsSubTab;

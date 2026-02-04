@@ -1038,6 +1038,120 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-muted);
         }
+
+        /* Conflict Resolution Modal Styles */
+        .conflict-modal {
+            max-height: 85vh;
+        }
+
+        .conflict-item {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .conflict-meal-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .conflict-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .conflict-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .conflict-option:hover {
+            border-color: var(--text-muted);
+        }
+
+        .conflict-option input[type="radio"] {
+            margin-top: 4px;
+            accent-color: var(--accent-primary);
+            width: 18px;
+            height: 18px;
+        }
+
+        .conflict-option:has(input:checked) {
+            border-color: var(--accent-primary);
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        .conflict-option-content {
+            flex: 1;
+        }
+
+        .conflict-option-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .conflict-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .conflict-badge.local {
+            background: var(--protein-color);
+            color: white;
+        }
+
+        .conflict-badge.remote {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .conflict-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .conflict-details {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .conflict-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .conflict-actions button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
     </style>
 </head>
 <body>
@@ -1288,7 +1402,7 @@
             <div class="settings-section" id="sheetsSection" style="display: none;">
                 <h3>Google Sheets Sync</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
-                    Select a spreadsheet to sync your meals. Data will be saved automatically.
+                    Select a spreadsheet to sync your meals across devices. Syncs automatically when you open the app or make changes. Conflicts will be detected and you'll choose which version to keep.
                 </p>
                 <div id="sheetsList">
                     <!-- Will be populated by JS -->
@@ -1313,6 +1427,23 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Conflict Resolution Modal -->
+    <div class="modal-overlay" id="conflictOverlay">
+        <div class="modal conflict-modal">
+            <div class="modal-header">
+                <h2>Sync Conflict</h2>
+                <button class="close-btn" onclick="cancelConflictResolution()">&times;</button>
+            </div>
+            <div id="conflictList">
+                <!-- Conflicts will be populated by JS -->
+            </div>
+            <div class="conflict-actions">
+                <button class="btn-secondary" onclick="cancelConflictResolution()">Cancel</button>
+                <button class="btn-primary" onclick="resolveConflicts()">Apply Choices</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Google API -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
