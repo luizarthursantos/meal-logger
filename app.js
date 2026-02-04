@@ -555,21 +555,51 @@ function showToast(message, type = '') {
 // IndexedDB initialization
 function initDB() {
     return new Promise((resolve, reject) => {
+        // Safari fix: Check if IndexedDB is available
+        if (!window.indexedDB) {
+            console.error('IndexedDB not supported');
+            reject(new Error('IndexedDB not supported'));
+            return;
+        }
+
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            db = request.result;
+        request.onerror = (event) => {
+            console.error('Database error:', event.target.error);
+            reject(event.target.error);
+        };
+
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log('Database opened successfully');
+
+            // Safari fix: Handle database close events
+            db.onclose = () => {
+                console.log('Database connection closed');
+                db = null;
+            };
+
+            db.onerror = (event) => {
+                console.error('Database error:', event.target.error);
+            };
+
             resolve(db);
         };
 
         request.onupgradeneeded = (event) => {
+            console.log('Database upgrade needed');
             const database = event.target.result;
             if (!database.objectStoreNames.contains(STORE_NAME)) {
                 const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
                 store.createIndex('date', 'date', { unique: false });
                 store.createIndex('type', 'type', { unique: false });
+                console.log('Object store created');
             }
+        };
+
+        // Safari fix: Handle blocked events
+        request.onblocked = () => {
+            console.warn('Database blocked - close other tabs');
         };
     });
 }
@@ -634,18 +664,50 @@ function updateDateDisplay() {
 // Database operations
 function getMealsByDate(date) {
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const index = store.index('date');
-        const dateStr = formatDate(date);
-        console.log('Querying meals for date:', dateStr);
-        const request = index.getAll(dateStr);
+        // Safari fix: ensure db is ready
+        if (!db) {
+            console.error('Database not initialized');
+            resolve([]);
+            return;
+        }
 
-        request.onsuccess = () => {
-            console.log('Query result:', request.result);
-            resolve(request.result);
-        };
-        request.onerror = () => reject(request.error);
+        try {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const dateStr = formatDate(date);
+            console.log('Querying meals for date:', dateStr);
+
+            // Safari fix: Use cursor instead of index.getAll for better compatibility
+            const meals = [];
+            const request = store.openCursor();
+
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    if (cursor.value.date === dateStr) {
+                        meals.push(cursor.value);
+                    }
+                    cursor.continue();
+                } else {
+                    console.log('Query result:', meals);
+                    resolve(meals);
+                }
+            };
+
+            request.onerror = () => {
+                console.error('Cursor error:', request.error);
+                reject(request.error);
+            };
+
+            // Safari fix: Handle transaction errors
+            transaction.onerror = () => {
+                console.error('Transaction error:', transaction.error);
+                reject(transaction.error);
+            };
+        } catch (error) {
+            console.error('getMealsByDate error:', error);
+            resolve([]);
+        }
     });
 }
 
@@ -717,13 +779,22 @@ function getMealById(id) {
 
 // UI rendering
 async function loadMeals() {
-    const dateStr = formatDate(currentDate);
-    console.log('Loading meals for date:', dateStr);
-    const meals = await getMealsByDate(currentDate);
-    console.log('Found meals:', meals.length, meals);
-    renderMeals(meals);
-    updateSummary(meals);
-    updateDailyAnalytics(meals);
+    try {
+        const dateStr = formatDate(currentDate);
+        console.log('Loading meals for date:', dateStr);
+        const meals = await getMealsByDate(currentDate);
+        console.log('Found meals:', meals.length, meals);
+        renderMeals(meals);
+        updateSummary(meals);
+        updateDailyAnalytics(meals);
+        return meals;
+    } catch (error) {
+        console.error('Error in loadMeals:', error);
+        renderMeals([]);
+        updateSummary([]);
+        updateDailyAnalytics([]);
+        return [];
+    }
 }
 
 function renderMeals(meals) {
@@ -1012,22 +1083,32 @@ async function handleSubmit(e) {
 
 // Navigate to previous day
 function goToPrevDay() {
-    const newDate = new Date(currentDate);
+    // Safari fix: Create date from timestamp to avoid timezone issues
+    const timestamp = currentDate.getTime();
+    const newDate = new Date(timestamp);
     newDate.setDate(newDate.getDate() - 1);
     currentDate = newDate;
-    updateDateDisplay();
-    loadMeals();
     console.log('Changed to previous day:', formatDate(currentDate));
+    updateDateDisplay();
+    // Safari fix: Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+        loadMeals().catch(err => console.error('Error loading meals:', err));
+    }, 0);
 }
 
 // Navigate to next day
 function goToNextDay() {
-    const newDate = new Date(currentDate);
+    // Safari fix: Create date from timestamp to avoid timezone issues
+    const timestamp = currentDate.getTime();
+    const newDate = new Date(timestamp);
     newDate.setDate(newDate.getDate() + 1);
     currentDate = newDate;
-    updateDateDisplay();
-    loadMeals();
     console.log('Changed to next day:', formatDate(currentDate));
+    updateDateDisplay();
+    // Safari fix: Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+        loadMeals().catch(err => console.error('Error loading meals:', err));
+    }, 0);
 }
 
 // Event listeners setup
