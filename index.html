@@ -1280,6 +1280,55 @@
             font-style: italic;
         }
 
+        .target-calories-summary {
+            text-align: center;
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .target-cal-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .target-cal-actual {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .target-cal-divider {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .target-cal-target {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        .target-cal-bar-track {
+            height: 10px;
+            background: var(--bg-elevated);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .target-cal-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.3s ease;
+        }
+
+        .target-cal-bar-fill.over-target {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a5a);
+        }
+
         /* Macro Targets Settings Form */
         .macro-targets-form {
             display: flex;
@@ -1426,6 +1475,16 @@
                 <div class="analytics-card">
                     <h3>Daily Targets</h3>
                     <div class="targets-container" id="targetsContainer">
+                        <div class="target-calories-summary" id="targetCaloriesSummary" style="display: none;">
+                            <div class="target-cal-row">
+                                <span class="target-cal-actual" id="actualTotalCal">0</span>
+                                <span class="target-cal-divider">/</span>
+                                <span class="target-cal-target"><span id="targetTotalCal">0</span> cal</span>
+                            </div>
+                            <div class="target-cal-bar-track">
+                                <div class="target-cal-bar-fill" id="totalCalBar" style="width: 0%"></div>
+                            </div>
+                        </div>
                         <div class="target-row">
                             <div class="target-info">
                                 <span class="target-label">Protein</span>
