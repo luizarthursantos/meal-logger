@@ -602,6 +602,9 @@ async function smartSync() {
         // No conflicts - merge automatically
         await performMerge(newFromRemote, localOnlyMeals, []);
 
+        // Also sync targets from Google Sheets
+        await syncTargetsFromSheet();
+
     } catch (error) {
         console.error('Smart sync error:', error);
         updateSyncStatus('error');
@@ -609,6 +612,33 @@ async function smartSync() {
     }
 
     isSyncing = false;
+}
+
+// Sync targets from Google Sheets to localStorage
+async function syncTargetsFromSheet() {
+    const remoteTargets = await loadTargetsFromSheet();
+    if (remoteTargets) {
+        const localTargets = getMacroTargets();
+
+        // If remote has targets and local doesn't, use remote
+        // If both have targets, prefer the one with values
+        const hasRemote = remoteTargets.protein || remoteTargets.carbs || remoteTargets.fat || remoteTargets.sugar;
+        const hasLocal = localTargets.protein || localTargets.carbs || localTargets.fat || localTargets.sugar;
+
+        if (hasRemote && !hasLocal) {
+            // Use remote targets
+            localStorage.setItem('mealLogger_targetProtein', remoteTargets.protein.toString());
+            localStorage.setItem('mealLogger_targetCarbs', remoteTargets.carbs.toString());
+            localStorage.setItem('mealLogger_targetFat', remoteTargets.fat.toString());
+            localStorage.setItem('mealLogger_targetSugar', remoteTargets.sugar.toString());
+            console.log('Loaded targets from Google Sheets');
+            // Refresh the display
+            loadMeals();
+        } else if (hasLocal && !hasRemote) {
+            // Push local targets to remote
+            await syncTargetsToSheet(localTargets);
+        }
+    }
 }
 
 // Check if two meals have different content
@@ -1411,6 +1441,36 @@ function drawMacroPieChart(totals) {
 function updateTargetsProgress(totals) {
     const targets = getMacroTargets();
 
+    // Calculate calories from targets (protein*4 + carbs*4 + fat*9)
+    const targetCalories = (targets.protein * 4) + (targets.carbs * 4) + (targets.fat * 9);
+    const actualCalories = (totals.protein * 4) + (totals.carbs * 4) + (totals.fat * 9);
+
+    // Update calorie summary
+    const calSummary = document.getElementById('targetCaloriesSummary');
+    const hasTargets = targets.protein || targets.carbs || targets.fat || targets.sugar;
+
+    if (calSummary) {
+        if (hasTargets && targetCalories > 0) {
+            calSummary.style.display = 'block';
+            document.getElementById('actualTotalCal').textContent = actualCalories;
+            document.getElementById('targetTotalCal').textContent = targetCalories;
+
+            // Update calorie bar
+            const calBar = document.getElementById('totalCalBar');
+            if (calBar) {
+                const calPercent = Math.min((actualCalories / targetCalories) * 100, 100);
+                calBar.style.width = `${calPercent}%`;
+                if (actualCalories > targetCalories) {
+                    calBar.classList.add('over-target');
+                } else {
+                    calBar.classList.remove('over-target');
+                }
+            }
+        } else {
+            calSummary.style.display = 'none';
+        }
+    }
+
     // Update protein
     document.getElementById('proteinActual').textContent = totals.protein;
     document.getElementById('proteinTarget').textContent = targets.protein || '--';
@@ -1434,7 +1494,6 @@ function updateTargetsProgress(totals) {
     // Show/hide hint
     const hint = document.getElementById('targetsHint');
     if (hint) {
-        const hasTargets = targets.protein || targets.carbs || targets.fat || targets.sugar;
         hint.style.display = hasTargets ? 'none' : 'block';
     }
 }
@@ -1470,17 +1529,23 @@ function getMacroTargets() {
     };
 }
 
-// Save macro targets to localStorage
-function saveMacroTargets() {
-    const protein = document.getElementById('targetProtein').value;
-    const carbs = document.getElementById('targetCarbs').value;
-    const fat = document.getElementById('targetFat').value;
-    const sugar = document.getElementById('targetSugar').value;
+// Save macro targets to localStorage and Google Sheets
+async function saveMacroTargets() {
+    const protein = parseInt(document.getElementById('targetProtein').value) || 0;
+    const carbs = parseInt(document.getElementById('targetCarbs').value) || 0;
+    const fat = parseInt(document.getElementById('targetFat').value) || 0;
+    const sugar = parseInt(document.getElementById('targetSugar').value) || 0;
 
-    localStorage.setItem('mealLogger_targetProtein', protein || '');
-    localStorage.setItem('mealLogger_targetCarbs', carbs || '');
-    localStorage.setItem('mealLogger_targetFat', fat || '');
-    localStorage.setItem('mealLogger_targetSugar', sugar || '');
+    // Save to localStorage
+    localStorage.setItem('mealLogger_targetProtein', protein.toString());
+    localStorage.setItem('mealLogger_targetCarbs', carbs.toString());
+    localStorage.setItem('mealLogger_targetFat', fat.toString());
+    localStorage.setItem('mealLogger_targetSugar', sugar.toString());
+
+    // Sync to Google Sheets if connected
+    if (selectedSheetId && accessToken) {
+        await syncTargetsToSheet({ protein, carbs, fat, sugar });
+    }
 
     showToast('Targets saved!', 'success');
 
@@ -1501,6 +1566,101 @@ function loadMacroTargetsIntoForm() {
     if (carbsInput && targets.carbs) carbsInput.value = targets.carbs;
     if (fatInput && targets.fat) fatInput.value = targets.fat;
     if (sugarInput && targets.sugar) sugarInput.value = targets.sugar;
+}
+
+// Sync targets to Google Sheets (Settings tab)
+async function syncTargetsToSheet(targets) {
+    if (!selectedSheetId || !accessToken) return;
+
+    try {
+        // First, ensure the Settings sheet exists
+        await ensureSettingsSheet();
+
+        // Write targets to Settings sheet
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: selectedSheetId,
+            range: 'Settings!A1:B5',
+            valueInputOption: 'RAW',
+            resource: {
+                values: [
+                    ['Setting', 'Value'],
+                    ['targetProtein', targets.protein || 0],
+                    ['targetCarbs', targets.carbs || 0],
+                    ['targetFat', targets.fat || 0],
+                    ['targetSugar', targets.sugar || 0]
+                ]
+            }
+        });
+
+        console.log('Targets synced to Google Sheets');
+    } catch (error) {
+        console.error('Error syncing targets to sheet:', error);
+    }
+}
+
+// Load targets from Google Sheets
+async function loadTargetsFromSheet() {
+    if (!selectedSheetId || !accessToken) return null;
+
+    try {
+        const response = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: selectedSheetId,
+            range: 'Settings!A2:B5'
+        });
+
+        const rows = response.result.values || [];
+        const targets = {};
+
+        rows.forEach(row => {
+            if (row[0] && row[1]) {
+                targets[row[0]] = parseInt(row[1]) || 0;
+            }
+        });
+
+        return {
+            protein: targets.targetProtein || 0,
+            carbs: targets.targetCarbs || 0,
+            fat: targets.targetFat || 0,
+            sugar: targets.targetSugar || 0
+        };
+    } catch (error) {
+        console.log('Could not load targets from sheet:', error);
+        return null;
+    }
+}
+
+// Ensure Settings sheet exists in the spreadsheet
+async function ensureSettingsSheet() {
+    if (!selectedSheetId || !accessToken) return;
+
+    try {
+        // Get spreadsheet info to check existing sheets
+        const response = await gapi.client.sheets.spreadsheets.get({
+            spreadsheetId: selectedSheetId
+        });
+
+        const sheets = response.result.sheets || [];
+        const hasSettingsSheet = sheets.some(sheet => sheet.properties.title === 'Settings');
+
+        if (!hasSettingsSheet) {
+            // Create Settings sheet
+            await gapi.client.sheets.spreadsheets.batchUpdate({
+                spreadsheetId: selectedSheetId,
+                resource: {
+                    requests: [{
+                        addSheet: {
+                            properties: {
+                                title: 'Settings'
+                            }
+                        }
+                    }]
+                }
+            });
+            console.log('Settings sheet created');
+        }
+    } catch (error) {
+        console.error('Error ensuring Settings sheet:', error);
+    }
 }
 
 async function updateWeeklyAnalytics() {
