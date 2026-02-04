@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#4CAF50">
+    <meta name="theme-color" content="#1a1a2e">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Meal Logger">
@@ -17,81 +17,113 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-elevated: #1f2940;
+            --accent-primary: #00d4aa;
+            --accent-secondary: #00b894;
+            --accent-gradient: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6c6c7c;
+            --border-color: #2a2a4a;
+            --success: #00d4aa;
+            --warning: #ffd93d;
+            --error: #ff6b6b;
+            --protein-color: #6c5ce7;
+            --carbs-color: #fdcb6e;
+            --fat-color: #e17055;
+            --sugar-color: #fd79a8;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #f5f5f5;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding-bottom: 80px;
+            padding-bottom: 100px;
         }
 
         header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            background: var(--bg-secondary);
             color: white;
             padding: 20px;
             text-align: center;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .settings-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             font-size: 1.2rem;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .settings-btn:hover {
-            background: rgba(255,255,255,0.3);
+            background: var(--bg-card);
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
         }
 
         .date-nav {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
         }
 
         .date-nav button {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             font-size: 1.2rem;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
         .date-nav button:hover {
-            background: rgba(255,255,255,0.3);
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: var(--bg-primary);
         }
 
         .date-nav span {
             font-size: 1rem;
-            min-width: 150px;
+            font-weight: 600;
+            min-width: 140px;
+            color: var(--text-primary);
         }
 
         .sync-status {
@@ -99,9 +131,9 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            margin-top: 8px;
+            margin-top: 12px;
             font-size: 0.75rem;
-            opacity: 0.9;
+            color: var(--text-muted);
         }
 
         .sync-status.hidden {
@@ -112,16 +144,16 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #81c784;
+            background: var(--success);
         }
 
         .sync-indicator.syncing {
             animation: pulse 1s infinite;
-            background: #fff59d;
+            background: var(--warning);
         }
 
         .sync-indicator.error {
-            background: #ef5350;
+            background: var(--error);
         }
 
         @keyframes pulse {
@@ -132,29 +164,34 @@
         /* Tab Navigation */
         .tab-nav {
             display: flex;
-            background: white;
-            margin: 15px 15px 0;
-            border-radius: 12px;
-            padding: 5px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: var(--bg-secondary);
+            margin: 15px;
+            border-radius: 16px;
+            padding: 6px;
+            border: 1px solid var(--border-color);
         }
 
         .tab-btn {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             border: none;
             background: transparent;
             font-size: 0.9rem;
-            font-weight: 500;
-            color: #666;
+            font-weight: 600;
+            color: var(--text-muted);
             cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.2s;
+            border-radius: 12px;
+            transition: all 0.3s;
         }
 
         .tab-btn.active {
-            background: #4CAF50;
-            color: white;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
+        }
+
+        .tab-btn:not(.active):hover {
+            color: var(--text-primary);
+            background: var(--bg-elevated);
         }
 
         .tab-content {
@@ -166,42 +203,47 @@
         }
 
         .summary {
-            background: white;
+            background: var(--bg-card);
             margin: 15px;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
         }
 
         .summary h3 {
-            color: #333;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
         }
 
         .summary-stats {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
+            gap: 10px;
             text-align: center;
         }
 
         .stat {
-            padding: 10px 5px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            padding: 12px 5px;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
         }
 
         .stat-value {
             font-size: 1.1rem;
             font-weight: 700;
-            color: #4CAF50;
+            color: var(--accent-primary);
         }
 
         .stat-label {
-            font-size: 0.65rem;
-            color: #666;
-            margin-top: 2px;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .meals-container {
@@ -209,99 +251,113 @@
         }
 
         .meal-section {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .meal-section h2 {
-            font-size: 0.85rem;
-            color: #666;
+            font-size: 0.8rem;
+            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
             padding-left: 5px;
         }
 
         .meal-card {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s;
+        }
+
+        .meal-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
         }
 
         .meal-info h3 {
             font-size: 1rem;
-            color: #333;
-            margin-bottom: 5px;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            font-weight: 600;
         }
 
         .meal-info p {
-            font-size: 0.85rem;
-            color: #888;
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         .meal-calories {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #4CAF50;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-primary);
         }
 
         .meal-actions {
             display: flex;
             gap: 8px;
-            margin-left: 10px;
+            margin-left: 12px;
         }
 
         .meal-actions button {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            font-size: 1rem;
             cursor: pointer;
-            padding: 5px;
-            opacity: 0.6;
-            transition: opacity 0.2s;
+            padding: 8px;
+            border-radius: 10px;
+            transition: all 0.2s;
         }
 
         .meal-actions button:hover {
-            opacity: 1;
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
-            color: #999;
+            padding: 60px 20px;
+            color: var(--text-muted);
         }
 
         .empty-state svg {
             width: 80px;
             height: 80px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             opacity: 0.3;
+            fill: var(--text-muted);
+        }
+
+        .empty-state p {
+            margin-bottom: 8px;
         }
 
         .add-btn {
             position: fixed;
-            bottom: 25px;
+            bottom: 30px;
             right: 25px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
             border: none;
             font-size: 2rem;
+            font-weight: 300;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 8px 30px rgba(0, 212, 170, 0.4);
             transition: transform 0.2s, box-shadow 0.2s;
             z-index: 100;
         }
 
         .add-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 212, 170, 0.5);
         }
 
         /* Modal Styles */
@@ -312,7 +368,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
             z-index: 200;
             align-items: flex-end;
             justify-content: center;
@@ -323,14 +380,16 @@
         }
 
         .modal {
-            background: white;
+            background: var(--bg-secondary);
             width: 100%;
             max-width: 500px;
-            border-radius: 20px 20px 0 0;
-            padding: 20px;
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
             max-height: 90vh;
             overflow-y: auto;
             animation: slideUp 0.3s ease;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
         }
 
         @keyframes slideUp {
@@ -346,54 +405,88 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .modal-header h2 {
             font-size: 1.3rem;
-            color: #333;
+            color: var(--text-primary);
+            font-weight: 700;
         }
 
         .close-btn {
-            background: none;
-            border: none;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
             font-size: 1.5rem;
             cursor: pointer;
-            color: #999;
+            color: var(--text-muted);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         .form-group label {
             display: block;
-            font-size: 0.85rem;
-            color: #666;
-            margin-bottom: 5px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            padding: 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
             font-size: 1rem;
-            transition: border-color 0.2s;
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: var(--text-muted);
         }
 
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #4CAF50;
+            border-color: var(--accent-primary);
+            background: var(--bg-card);
         }
 
         .form-group input:read-only {
-            background: #f5f5f5;
-            color: #666;
+            background: var(--bg-card);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .form-group select {
+            cursor: pointer;
+        }
+
+        .form-group select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
         }
 
         .form-group textarea {
@@ -411,45 +504,56 @@
             margin-bottom: 0;
         }
 
+        .macro-inputs label {
+            font-size: 0.7rem;
+        }
+
         .calories-display {
-            background: #e8f5e9;
-            border-color: #4CAF50 !important;
+            background: var(--bg-card) !important;
+            border-color: var(--accent-primary) !important;
+            color: var(--accent-primary) !important;
+            font-weight: 700 !important;
+            font-size: 1.2rem !important;
+            text-align: center;
         }
 
         .calories-hint {
-            font-size: 0.75rem;
-            color: #888;
-            margin-top: 5px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            text-align: center;
         }
 
         .submit-btn {
             width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
+            padding: 16px;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
             border: none;
-            border-radius: 10px;
+            border-radius: 14px;
             font-size: 1rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             margin-top: 10px;
-            transition: opacity 0.2s;
+            transition: all 0.2s;
         }
 
         .submit-btn:hover {
-            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 170, 0.3);
         }
 
         .install-prompt {
             display: none;
             position: fixed;
-            bottom: 100px;
+            bottom: 110px;
             left: 15px;
             right: 15px;
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
             z-index: 150;
         }
 
@@ -458,8 +562,9 @@
         }
 
         .install-prompt p {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-size: 0.9rem;
+            color: var(--text-primary);
         }
 
         .install-prompt-buttons {
@@ -469,22 +574,24 @@
 
         .install-prompt-buttons button {
             flex: 1;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 10px;
             font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
         .install-btn {
-            background: #4CAF50;
-            color: white;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
             border: none;
         }
 
         .dismiss-btn {
-            background: #f0f0f0;
-            border: none;
-            color: #666;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
         }
 
         /* Settings Modal Styles */
@@ -493,27 +600,28 @@
         }
 
         .settings-section h3 {
-            font-size: 1rem;
-            color: #333;
+            font-size: 0.9rem;
+            color: var(--text-primary);
             margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .google-account {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            padding: 15px;
+            background: var(--bg-elevated);
+            border-radius: 14px;
             margin-bottom: 15px;
+            border: 1px solid var(--border-color);
         }
 
         .google-account img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
         }
 
         .google-account-info {
@@ -522,12 +630,12 @@
 
         .google-account-info .name {
             font-weight: 600;
-            color: #333;
+            color: var(--text-primary);
         }
 
         .google-account-info .email {
             font-size: 0.85rem;
-            color: #666;
+            color: var(--text-muted);
         }
 
         .google-btn {
@@ -536,18 +644,20 @@
             justify-content: center;
             gap: 10px;
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            background: white;
+            padding: 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-elevated);
+            color: var(--text-primary);
             font-size: 1rem;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .google-btn:hover {
-            border-color: #4285f4;
-            background: #f8f9fa;
+            border-color: var(--accent-primary);
+            background: var(--bg-card);
         }
 
         .google-btn svg {
@@ -556,12 +666,12 @@
         }
 
         .google-btn.sign-out {
-            border-color: #ef5350;
-            color: #ef5350;
+            border-color: var(--error);
+            color: var(--error);
         }
 
         .google-btn.sign-out:hover {
-            background: #ffebee;
+            background: rgba(255, 107, 107, 0.1);
         }
 
         .sheet-selector {
@@ -571,28 +681,28 @@
         .sheet-option {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            gap: 12px;
+            padding: 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
             margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.2s;
+            background: var(--bg-elevated);
         }
 
         .sheet-option:hover {
-            border-color: #4CAF50;
+            border-color: var(--accent-primary);
         }
 
         .sheet-option.selected {
-            border-color: #4CAF50;
-            background: #e8f5e9;
+            border-color: var(--accent-primary);
+            background: rgba(0, 212, 170, 0.1);
         }
 
         .sheet-option svg {
             width: 24px;
             height: 24px;
-            color: #0f9d58;
         }
 
         .sheet-option-info {
@@ -601,12 +711,12 @@
 
         .sheet-option-info .name {
             font-weight: 500;
-            color: #333;
+            color: var(--text-primary);
         }
 
         .sheet-option-info .detail {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--text-muted);
         }
 
         .sheet-actions {
@@ -617,36 +727,41 @@
 
         .sheet-actions button {
             flex: 1;
-            padding: 12px;
-            border-radius: 10px;
+            padding: 14px;
+            border-radius: 12px;
             font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .btn-primary {
-            background: #4CAF50;
-            color: white;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
             border: none;
         }
 
         .btn-primary:hover {
-            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 170, 0.3);
         }
 
         .btn-primary:disabled {
-            background: #ccc;
+            background: var(--bg-elevated);
+            color: var(--text-muted);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .btn-secondary {
-            background: white;
-            color: #333;
-            border: 2px solid #e0e0e0;
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
         }
 
         .btn-secondary:hover {
-            border-color: #4CAF50;
+            border-color: var(--accent-primary);
         }
 
         .sheets-list {
@@ -660,15 +775,15 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
-            color: #666;
+            color: var(--text-muted);
         }
 
         .loading-spinner::before {
             content: '';
             width: 20px;
             height: 20px;
-            border: 2px solid #e0e0e0;
-            border-top-color: #4CAF50;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-right: 10px;
@@ -680,17 +795,19 @@
 
         .toast {
             position: fixed;
-            bottom: 100px;
+            bottom: 110px;
             left: 50%;
             transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 14px 28px;
+            border-radius: 12px;
             font-size: 0.9rem;
+            font-weight: 500;
             z-index: 300;
             opacity: 0;
             transition: opacity 0.3s;
+            border: 1px solid var(--border-color);
         }
 
         .toast.show {
@@ -698,17 +815,21 @@
         }
 
         .toast.success {
-            background: #4CAF50;
+            background: var(--success);
+            color: var(--bg-primary);
+            border-color: var(--success);
         }
 
         .toast.error {
-            background: #ef5350;
+            background: var(--error);
+            color: white;
+            border-color: var(--error);
         }
 
         .no-sheets {
             text-align: center;
             padding: 20px;
-            color: #666;
+            color: var(--text-muted);
         }
 
         /* Analytics Styles */
@@ -719,78 +840,90 @@
         .analytics-sub-tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .analytics-sub-tab {
             flex: 1;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            background: white;
-            border-radius: 8px;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-muted);
+            border-radius: 12px;
             font-size: 0.85rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .analytics-sub-tab.active {
-            border-color: #4CAF50;
-            background: #e8f5e9;
-            color: #4CAF50;
-            font-weight: 600;
+            border-color: var(--accent-primary);
+            background: rgba(0, 212, 170, 0.1);
+            color: var(--accent-primary);
+        }
+
+        .analytics-sub-tab:not(.active):hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
         }
 
         .analytics-card {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 20px;
             margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
         }
 
         .analytics-card h3 {
-            font-size: 0.9rem;
-            color: #666;
+            font-size: 0.8rem;
+            color: var(--text-muted);
             margin-bottom: 15px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }
 
         .analytics-big-number {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 700;
-            color: #4CAF50;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 5px;
         }
 
         .analytics-label {
             font-size: 0.85rem;
-            color: #888;
+            color: var(--text-muted);
         }
 
         .analytics-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: 12px;
         }
 
         .analytics-stat {
             text-align: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            padding: 18px;
+            background: var(--bg-elevated);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
         }
 
         .analytics-stat-value {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #333;
+            color: var(--text-primary);
         }
 
         .analytics-stat-label {
-            font-size: 0.75rem;
-            color: #666;
+            font-size: 0.7rem;
+            color: var(--text-muted);
             margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .chart-bar-container {
@@ -800,110 +933,118 @@
         .chart-bar {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
         }
 
         .chart-bar-label {
-            width: 80px;
-            font-size: 0.8rem;
-            color: #666;
+            width: 70px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .chart-bar-track {
             flex: 1;
-            height: 24px;
-            background: #f0f0f0;
-            border-radius: 12px;
+            height: 28px;
+            background: var(--bg-elevated);
+            border-radius: 14px;
             overflow: hidden;
-            margin: 0 10px;
+            margin: 0 12px;
+            border: 1px solid var(--border-color);
         }
 
         .chart-bar-fill {
             height: 100%;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            border-radius: 12px;
-            transition: width 0.3s ease;
+            border-radius: 14px;
+            transition: width 0.5s ease;
+            min-width: 4px;
         }
 
-        .chart-bar-fill.protein { background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); }
-        .chart-bar-fill.carbs { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); }
-        .chart-bar-fill.fat { background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); }
-        .chart-bar-fill.sugar { background: linear-gradient(135deg, #E91E63 0%, #C2185B 100%); }
+        .chart-bar-fill.protein { background: linear-gradient(135deg, var(--protein-color) 0%, #5f4dd0 100%); }
+        .chart-bar-fill.carbs { background: linear-gradient(135deg, var(--carbs-color) 0%, #f0b429 100%); }
+        .chart-bar-fill.fat { background: linear-gradient(135deg, var(--fat-color) 0%, #d35400 100%); }
+        .chart-bar-fill.sugar { background: linear-gradient(135deg, var(--sugar-color) 0%, #e84393 100%); }
 
         .chart-bar-value {
-            width: 50px;
+            width: 55px;
             font-size: 0.85rem;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            color: var(--text-primary);
             text-align: right;
         }
 
         .week-day-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
+            gap: 8px;
             margin-top: 15px;
         }
 
         .week-day {
             text-align: center;
-            padding: 10px 5px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            padding: 12px 5px;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
         }
 
         .week-day-name {
-            font-size: 0.7rem;
-            color: #999;
-            margin-bottom: 5px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .week-day-value {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #333;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
         .week-day.today {
-            background: #e8f5e9;
-            border: 2px solid #4CAF50;
+            background: rgba(0, 212, 170, 0.15);
+            border-color: var(--accent-primary);
+        }
+
+        .week-day.today .week-day-name {
+            color: var(--accent-primary);
+        }
+
+        .week-day.today .week-day-value {
+            color: var(--accent-primary);
         }
 
         .week-day.has-data {
-            background: #e3f2fd;
+            background: var(--bg-card);
         }
 
-        .trend-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.85rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-left: 10px;
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
         }
 
-        .trend-up {
-            background: #ffebee;
-            color: #c62828;
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
         }
 
-        .trend-down {
-            background: #e8f5e9;
-            color: #2e7d32;
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
         }
 
-        .trend-neutral {
-            background: #f5f5f5;
-            color: #666;
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
     </style>
 </head>
 <body>
     <header>
         <div class="header-top">
-            <div style="width: 36px;"></div>
-            <h1>Meal Logger</h1>
+            <div style="width: 40px;"></div>
+            <h1>🍽️ Meal Logger</h1>
             <button class="settings-btn" id="settingsBtn" title="Settings">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                     <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
@@ -911,9 +1052,9 @@
             </button>
         </div>
         <div class="date-nav">
-            <button id="prevDay">&lt;</button>
+            <button id="prevDay">‹</button>
             <span id="currentDate"></span>
-            <button id="nextDay">&gt;</button>
+            <button id="nextDay">›</button>
         </div>
         <div class="sync-status hidden" id="syncStatus">
             <span class="sync-indicator" id="syncIndicator"></span>
@@ -923,8 +1064,8 @@
 
     <!-- Tab Navigation -->
     <div class="tab-nav">
-        <button class="tab-btn active" data-tab="meals">Meals</button>
-        <button class="tab-btn" data-tab="analytics">Analytics</button>
+        <button class="tab-btn active" data-tab="meals" onclick="switchTab('meals')">Meals</button>
+        <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')">Analytics</button>
     </div>
 
     <!-- Meals Tab -->
@@ -961,7 +1102,7 @@
                     <path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05l-5 2.18V22.99h.06zM1 21.99V8.97l5-2.19v15.21l-5 .00zM11 2L6.49 4.18v16.82L11 22.99 15.51 21V4.18L11 2zm3.51 6.03l-3.51 1.54-3.51-1.54v-2l3.51 1.54 3.51-1.54v2z"/>
                 </svg>
                 <p>No meals logged today</p>
-                <p>Tap + to add your first meal</p>
+                <p style="font-size: 0.85rem;">Tap + to add your first meal</p>
             </div>
         </div>
     </div>
@@ -970,8 +1111,8 @@
     <div id="analyticsTab" class="tab-content">
         <div class="analytics-container">
             <div class="analytics-sub-tabs">
-                <button class="analytics-sub-tab active" data-subtab="daily">Daily</button>
-                <button class="analytics-sub-tab" data-subtab="weekly">Weekly</button>
+                <button class="analytics-sub-tab active" data-subtab="daily" onclick="switchAnalyticsSubTab('daily')">Daily</button>
+                <button class="analytics-sub-tab" data-subtab="weekly" onclick="switchAnalyticsSubTab('weekly')">Weekly</button>
             </div>
 
             <!-- Daily Analytics -->
@@ -1044,10 +1185,7 @@
                 <div class="analytics-card">
                     <h3>Weekly Average</h3>
                     <div class="analytics-big-number" id="weeklyAvgCalories">0</div>
-                    <div class="analytics-label">
-                        avg calories/day
-                        <span class="trend-indicator trend-neutral" id="weeklyTrend">-</span>
-                    </div>
+                    <div class="analytics-label">avg calories/day</div>
                 </div>
 
                 <div class="analytics-card">
@@ -1100,29 +1238,29 @@
                 <div class="form-group">
                     <label for="mealType">Meal Type</label>
                     <select id="mealType">
-                        <option value="breakfast">Breakfast</option>
-                        <option value="lunch">Lunch</option>
-                        <option value="dinner">Dinner</option>
-                        <option value="snack">Snack</option>
+                        <option value="breakfast">🌅 Breakfast</option>
+                        <option value="lunch">☀️ Lunch</option>
+                        <option value="dinner">🌙 Dinner</option>
+                        <option value="snack">🍎 Snack</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="calories">Calories (auto-calculated)</label>
-                    <input type="number" id="calories" class="calories-display" placeholder="0" min="0" readonly>
-                    <div class="calories-hint">Protein & Carbs = 4 cal/g, Fat = 9 cal/g</div>
+                    <input type="number" id="calories" class="calories-display" value="0" min="0" readonly>
+                    <div class="calories-hint">Protein & Carbs = 4 cal/g • Fat = 9 cal/g</div>
                 </div>
                 <div class="macro-inputs">
                     <div class="form-group">
                         <label for="protein">Protein (g)</label>
-                        <input type="number" id="protein" placeholder="0" min="0">
+                        <input type="number" id="protein" placeholder="0" min="0" oninput="calculateCalories()">
                     </div>
                     <div class="form-group">
                         <label for="carbs">Carbs (g)</label>
-                        <input type="number" id="carbs" placeholder="0" min="0">
+                        <input type="number" id="carbs" placeholder="0" min="0" oninput="calculateCalories()">
                     </div>
                     <div class="form-group">
                         <label for="fat">Fat (g)</label>
-                        <input type="number" id="fat" placeholder="0" min="0">
+                        <input type="number" id="fat" placeholder="0" min="0" oninput="calculateCalories()">
                     </div>
                     <div class="form-group">
                         <label for="sugar">Sugar (g)</label>
@@ -1142,7 +1280,7 @@
     <div class="modal-overlay" id="settingsOverlay">
         <div class="modal">
             <div class="modal-header">
-                <h2>Settings</h2>
+                <h2>⚙️ Settings</h2>
                 <button class="close-btn" id="closeSettings">&times;</button>
             </div>
 
@@ -1155,7 +1293,7 @@
 
             <div class="settings-section" id="sheetsSection" style="display: none;">
                 <h3>Google Sheets Sync</h3>
-                <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
                     Select a spreadsheet to sync your meals. Data will be saved automatically.
                 </p>
                 <div id="sheetsList">
@@ -1173,7 +1311,7 @@
     </div>
 
     <div class="install-prompt" id="installPrompt">
-        <p><strong>Install Meal Logger</strong> on your home screen for quick access!</p>
+        <p><strong>📱 Install Meal Logger</strong> on your home screen for quick access!</p>
         <div class="install-prompt-buttons">
             <button class="dismiss-btn" id="dismissInstall">Later</button>
             <button class="install-btn" id="installApp">Install</button>

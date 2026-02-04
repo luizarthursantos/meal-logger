@@ -2,7 +2,7 @@
 
 // Database configuration
 const DB_NAME = 'MealLoggerDB';
-const DB_VERSION = 2; // Incremented for sugar field
+const DB_VERSION = 2;
 const STORE_NAME = 'meals';
 
 // Google API configuration
@@ -49,15 +49,65 @@ function loadSavedSettings() {
     }
 }
 
-// Calculate calories from macros
+// Calculate calories from macros - GLOBAL FUNCTION
 function calculateCalories() {
-    const protein = parseInt(document.getElementById('protein').value) || 0;
-    const carbs = parseInt(document.getElementById('carbs').value) || 0;
-    const fat = parseInt(document.getElementById('fat').value) || 0;
+    const proteinInput = document.getElementById('protein');
+    const carbsInput = document.getElementById('carbs');
+    const fatInput = document.getElementById('fat');
+    const caloriesInput = document.getElementById('calories');
+
+    if (!proteinInput || !carbsInput || !fatInput || !caloriesInput) {
+        console.log('Form inputs not found');
+        return;
+    }
+
+    const protein = parseInt(proteinInput.value) || 0;
+    const carbs = parseInt(carbsInput.value) || 0;
+    const fat = parseInt(fatInput.value) || 0;
 
     // Protein: 4 cal/g, Carbs: 4 cal/g, Fat: 9 cal/g
     const calories = (protein * 4) + (carbs * 4) + (fat * 9);
-    document.getElementById('calories').value = calories;
+    caloriesInput.value = calories;
+
+    console.log(`Calculated calories: P:${protein} C:${carbs} F:${fat} = ${calories} cal`);
+}
+
+// Tab switching - GLOBAL FUNCTION
+function switchTab(tabName) {
+    console.log('Switching to tab:', tabName);
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === tabName + 'Tab');
+    });
+
+    // Load analytics data when switching to analytics tab
+    if (tabName === 'analytics') {
+        loadMeals().then(() => {
+            updateWeeklyAnalytics();
+        });
+    }
+}
+
+// Analytics sub-tab switching - GLOBAL FUNCTION
+function switchAnalyticsSubTab(subtabName) {
+    console.log('Switching analytics subtab to:', subtabName);
+
+    document.querySelectorAll('.analytics-sub-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.subtab === subtabName);
+    });
+
+    document.getElementById('dailyAnalytics').style.display = subtabName === 'daily' ? 'block' : 'none';
+    document.getElementById('weeklyAnalytics').style.display = subtabName === 'weekly' ? 'block' : 'none';
+
+    if (subtabName === 'weekly') {
+        updateWeeklyAnalytics();
+    }
 }
 
 // Initialize Google API
@@ -572,7 +622,9 @@ function getMealById(id) {
 
 // UI rendering
 async function loadMeals() {
+    console.log('Loading meals for date:', formatDate(currentDate));
     const meals = await getMealsByDate(currentDate);
+    console.log('Found meals:', meals.length);
     renderMeals(meals);
     updateSummary(meals);
     updateDailyAnalytics(meals);
@@ -602,9 +654,10 @@ function renderMeals(meals) {
 
     mealTypes.forEach(type => {
         if (groupedMeals[type].length > 0) {
+            const emoji = type === 'breakfast' ? '🌅' : type === 'lunch' ? '☀️' : type === 'dinner' ? '🌙' : '🍎';
             html += `
                 <div class="meal-section">
-                    <h2>${type.charAt(0).toUpperCase() + type.slice(1)}</h2>
+                    <h2>${emoji} ${type.charAt(0).toUpperCase() + type.slice(1)}</h2>
                     ${groupedMeals[type].map(meal => renderMealCard(meal)).join('')}
                 </div>
             `;
@@ -626,12 +679,12 @@ function renderMealCard(meal) {
         <div class="meal-card" data-id="${meal.id}">
             <div class="meal-info">
                 <h3>${escapeHtml(meal.name)}</h3>
-                <p>${macros.length > 0 ? macros.join(' | ') : 'No macros logged'}</p>
+                <p>${macros.length > 0 ? macros.join(' • ') : 'No macros logged'}</p>
             </div>
-            <div class="meal-calories">${calories} cal</div>
+            <div class="meal-calories">${calories}</div>
             <div class="meal-actions">
-                <button onclick="editMeal(${meal.id})" title="Edit">&#9998;</button>
-                <button onclick="confirmDelete(${meal.id})" title="Delete">&#128465;</button>
+                <button onclick="editMeal(${meal.id})" title="Edit">✏️</button>
+                <button onclick="confirmDelete(${meal.id})" title="Delete">🗑️</button>
             </div>
         </div>
     `;
@@ -850,57 +903,21 @@ async function handleSubmit(e) {
     }
 }
 
-// Tab handling
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-    });
-
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === tabName + 'Tab');
-    });
-
-    if (tabName === 'analytics') {
-        updateWeeklyAnalytics();
-    }
-}
-
-function switchAnalyticsSubTab(subtabName) {
-    document.querySelectorAll('.analytics-sub-tab').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.subtab === subtabName);
-    });
-
-    document.getElementById('dailyAnalytics').style.display = subtabName === 'daily' ? 'block' : 'none';
-    document.getElementById('weeklyAnalytics').style.display = subtabName === 'weekly' ? 'block' : 'none';
-
-    if (subtabName === 'weekly') {
-        updateWeeklyAnalytics();
-    }
-}
-
 // Event listeners setup
 function setupEventListeners() {
-    // Navigation
-    document.getElementById('prevDay').addEventListener('click', () => {
+    // Navigation - Day change
+    document.getElementById('prevDay').addEventListener('click', async () => {
         currentDate.setDate(currentDate.getDate() - 1);
         updateDateDisplay();
-        loadMeals();
+        await loadMeals();
+        console.log('Changed to previous day:', formatDate(currentDate));
     });
 
-    document.getElementById('nextDay').addEventListener('click', () => {
+    document.getElementById('nextDay').addEventListener('click', async () => {
         currentDate.setDate(currentDate.getDate() + 1);
         updateDateDisplay();
-        loadMeals();
-    });
-
-    // Tab navigation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-    });
-
-    // Analytics sub-tabs
-    document.querySelectorAll('.analytics-sub-tab').forEach(btn => {
-        btn.addEventListener('click', () => switchAnalyticsSubTab(btn.dataset.subtab));
+        await loadMeals();
+        console.log('Changed to next day:', formatDate(currentDate));
     });
 
     // Modal
@@ -910,11 +927,6 @@ function setupEventListeners() {
         if (e.target === document.getElementById('modalOverlay')) {
             closeModal();
         }
-    });
-
-    // Auto-calculate calories when macros change
-    ['protein', 'carbs', 'fat'].forEach(id => {
-        document.getElementById(id).addEventListener('input', calculateCalories);
     });
 
     // Settings
@@ -990,3 +1002,6 @@ window.selectSheet = selectSheet;
 window.createNewSheet = createNewSheet;
 window.loadFromSheet = loadFromSheet;
 window.syncToSheet = syncToSheet;
+window.calculateCalories = calculateCalories;
+window.switchTab = switchTab;
+window.switchAnalyticsSubTab = switchAnalyticsSubTab;
