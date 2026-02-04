@@ -26,8 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMeals();
     setupEventListeners();
     registerServiceWorker();
-    initGoogleAPI();
     loadSavedSettings();
+    initGoogleAPI();
 });
 
 // Load saved settings from localStorage
@@ -35,6 +35,7 @@ function loadSavedSettings() {
     const savedSheetId = localStorage.getItem('mealLogger_sheetId');
     const savedSheetName = localStorage.getItem('mealLogger_sheetName');
     const savedUser = localStorage.getItem('mealLogger_user');
+    const savedToken = localStorage.getItem('mealLogger_token');
 
     if (savedSheetId) {
         selectedSheetId = savedSheetId;
@@ -46,6 +47,15 @@ function loadSavedSettings() {
         } catch (e) {
             console.log('Could not parse saved user');
         }
+    }
+
+    if (savedToken) {
+        accessToken = savedToken;
+    }
+
+    // Show sync status if we have a saved sheet
+    if (selectedSheetId && savedSheetName) {
+        updateSyncStatus('synced', savedSheetName);
     }
 }
 
@@ -133,9 +143,52 @@ async function initGapiClient() {
         await gapi.client.load('sheets', 'v4');
         await gapi.client.load('drive', 'v3');
         console.log('Google API client initialized');
+
+        // If we have a saved token, try to use it
+        if (accessToken) {
+            gapi.client.setToken({ access_token: accessToken });
+            // Verify the token is still valid by making a simple request
+            tryRestoreSession();
+        }
     } catch (error) {
         console.error('Error initializing Google API client:', error);
     }
+}
+
+// Try to restore the previous session
+async function tryRestoreSession() {
+    try {
+        // Test if the token is still valid
+        const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+
+        if (response.ok) {
+            googleUser = await response.json();
+            localStorage.setItem('mealLogger_user', JSON.stringify(googleUser));
+            updateGoogleAccountUI();
+            console.log('Session restored successfully');
+
+            // Show sync status
+            const savedSheetName = localStorage.getItem('mealLogger_sheetName');
+            if (selectedSheetId && savedSheetName) {
+                updateSyncStatus('synced', savedSheetName);
+            }
+        } else {
+            // Token expired, clear it
+            console.log('Token expired, clearing session');
+            clearSavedSession();
+        }
+    } catch (error) {
+        console.log('Could not restore session:', error);
+        clearSavedSession();
+    }
+}
+
+function clearSavedSession() {
+    accessToken = null;
+    localStorage.removeItem('mealLogger_token');
+    updateGoogleAccountUI();
 }
 
 function setupGoogleAuth() {
@@ -156,6 +209,8 @@ function handleAuthCallback(response) {
     }
 
     accessToken = response.access_token;
+    // Save token to localStorage for persistence
+    localStorage.setItem('mealLogger_token', accessToken);
     gapi.client.setToken({ access_token: accessToken });
     fetchUserInfo();
 }
@@ -172,6 +227,12 @@ async function fetchUserInfo() {
 
         document.getElementById('sheetsSection').style.display = 'block';
         loadUserSheets();
+
+        // Auto-sync if we have a selected sheet
+        if (selectedSheetId) {
+            const savedSheetName = localStorage.getItem('mealLogger_sheetName');
+            updateSyncStatus('synced', savedSheetName || 'Google Sheets');
+        }
     } catch (error) {
         console.error('Error fetching user info:', error);
     }
@@ -194,6 +255,7 @@ function signOut() {
             localStorage.removeItem('mealLogger_user');
             localStorage.removeItem('mealLogger_sheetId');
             localStorage.removeItem('mealLogger_sheetName');
+            localStorage.removeItem('mealLogger_token');
             updateGoogleAccountUI();
             document.getElementById('sheetsSection').style.display = 'none';
             updateSyncStatus('hidden');
@@ -219,7 +281,9 @@ function updateGoogleAccountUI() {
             </button>
         `;
         document.getElementById('sheetsSection').style.display = 'block';
-        loadUserSheets();
+        if (typeof gapi !== 'undefined' && gapi.client) {
+            loadUserSheets();
+        }
     } else {
         container.innerHTML = `
             <button class="google-btn" onclick="signIn()">
@@ -512,21 +576,30 @@ function initDB() {
 
 // Date utilities
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function formatDisplayDate(date) {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (formatDate(date) === formatDate(today)) {
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+
+    if (compareDate.getTime() === today.getTime()) {
         return 'Today';
-    } else if (formatDate(date) === formatDate(yesterday)) {
+    } else if (compareDate.getTime() === yesterday.getTime()) {
         return 'Yesterday';
-    } else if (formatDate(date) === formatDate(tomorrow)) {
+    } else if (compareDate.getTime() === tomorrow.getTime()) {
         return 'Tomorrow';
     } else {
         return date.toLocaleDateString('en-US', {
@@ -539,6 +612,23 @@ function formatDisplayDate(date) {
 
 function updateDateDisplay() {
     document.getElementById('currentDate').textContent = formatDisplayDate(currentDate);
+    // Also update the analytics header to show selected date
+    const analyticsHeader = document.getElementById('analyticsDailyCalories');
+    if (analyticsHeader) {
+        const dateLabel = document.querySelector('#dailyAnalytics .analytics-card:first-child h3');
+        if (dateLabel) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selected = new Date(currentDate);
+            selected.setHours(0, 0, 0, 0);
+
+            if (selected.getTime() === today.getTime()) {
+                dateLabel.textContent = "Today's Intake";
+            } else {
+                dateLabel.textContent = `${formatDisplayDate(currentDate)}'s Intake`;
+            }
+        }
+    }
 }
 
 // Database operations
@@ -547,9 +637,14 @@ function getMealsByDate(date) {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         const index = store.index('date');
-        const request = index.getAll(formatDate(date));
+        const dateStr = formatDate(date);
+        console.log('Querying meals for date:', dateStr);
+        const request = index.getAll(dateStr);
 
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            console.log('Query result:', request.result);
+            resolve(request.result);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -622,9 +717,10 @@ function getMealById(id) {
 
 // UI rendering
 async function loadMeals() {
-    console.log('Loading meals for date:', formatDate(currentDate));
+    const dateStr = formatDate(currentDate);
+    console.log('Loading meals for date:', dateStr);
     const meals = await getMealsByDate(currentDate);
-    console.log('Found meals:', meals.length);
+    console.log('Found meals:', meals.length, meals);
     renderMeals(meals);
     updateSummary(meals);
     updateDailyAnalytics(meals);
@@ -636,12 +732,20 @@ function renderMeals(meals) {
 
     if (meals.length === 0) {
         container.innerHTML = '';
-        container.appendChild(emptyState);
-        emptyState.style.display = 'block';
+        const newEmptyState = document.createElement('div');
+        newEmptyState.className = 'empty-state';
+        newEmptyState.id = 'emptyState';
+        newEmptyState.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05l-5 2.18V22.99h.06zM1 21.99V8.97l5-2.19v15.21l-5 .00zM11 2L6.49 4.18v16.82L11 22.99 15.51 21V4.18L11 2zm3.51 6.03l-3.51 1.54-3.51-1.54v-2l3.51 1.54 3.51-1.54v2z"/>
+            </svg>
+            <p>No meals logged for this day</p>
+            <p style="font-size: 0.85rem;">Tap + to add your first meal</p>
+        `;
+        container.innerHTML = '';
+        container.appendChild(newEmptyState);
         return;
     }
-
-    emptyState.style.display = 'none';
 
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     const groupedMeals = {};
@@ -754,6 +858,9 @@ function updateDailyAnalytics(meals) {
     document.getElementById('lunchCount').textContent = typeCounts.lunch;
     document.getElementById('dinnerCount').textContent = typeCounts.dinner;
     document.getElementById('snackCount').textContent = typeCounts.snack;
+
+    // Update the date label
+    updateDateDisplay();
 }
 
 async function updateWeeklyAnalytics() {
@@ -903,22 +1010,31 @@ async function handleSubmit(e) {
     }
 }
 
+// Navigate to previous day
+function goToPrevDay() {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() - 1);
+    currentDate = newDate;
+    updateDateDisplay();
+    loadMeals();
+    console.log('Changed to previous day:', formatDate(currentDate));
+}
+
+// Navigate to next day
+function goToNextDay() {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + 1);
+    currentDate = newDate;
+    updateDateDisplay();
+    loadMeals();
+    console.log('Changed to next day:', formatDate(currentDate));
+}
+
 // Event listeners setup
 function setupEventListeners() {
     // Navigation - Day change
-    document.getElementById('prevDay').addEventListener('click', async () => {
-        currentDate.setDate(currentDate.getDate() - 1);
-        updateDateDisplay();
-        await loadMeals();
-        console.log('Changed to previous day:', formatDate(currentDate));
-    });
-
-    document.getElementById('nextDay').addEventListener('click', async () => {
-        currentDate.setDate(currentDate.getDate() + 1);
-        updateDateDisplay();
-        await loadMeals();
-        console.log('Changed to next day:', formatDate(currentDate));
-    });
+    document.getElementById('prevDay').addEventListener('click', goToPrevDay);
+    document.getElementById('nextDay').addEventListener('click', goToNextDay);
 
     // Modal
     document.getElementById('addMealBtn').addEventListener('click', () => openModal());
@@ -1005,3 +1121,5 @@ window.syncToSheet = syncToSheet;
 window.calculateCalories = calculateCalories;
 window.switchTab = switchTab;
 window.switchAnalyticsSubTab = switchAnalyticsSubTab;
+window.goToPrevDay = goToPrevDay;
+window.goToNextDay = goToNextDay;
