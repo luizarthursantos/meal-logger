@@ -1369,6 +1369,32 @@
         .target-input-row input::placeholder {
             color: var(--text-muted);
         }
+
+        .target-calories-preview {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .calories-calc-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .calories-calc-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .calories-calc-breakdown {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -1731,6 +1757,13 @@
                     <div class="target-input-row">
                         <label for="targetSugar">Sugar (g)</label>
                         <input type="number" id="targetSugar" placeholder="e.g., 50" min="0">
+                    </div>
+                    <div class="target-calories-preview" id="targetCaloriesPreview">
+                        <div class="calories-calc-label">Calculated Daily Calories:</div>
+                        <div class="calories-calc-value"><span id="calcTargetCalories">0</span> cal</div>
+                        <div class="calories-calc-breakdown">
+                            Protein (<span id="calcProteinCal">0</span>) + Carbs (<span id="calcCarbsCal">0</span>) + Fat (<span id="calcFatCal">0</span>)
+                        </div>
                     </div>
                     <button class="btn-primary" id="saveTargetsBtn" style="margin-top: 15px; width: 100%;">Save Targets</button>
                 </div>

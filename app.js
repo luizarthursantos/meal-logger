@@ -1549,8 +1549,28 @@ async function saveMacroTargets() {
 
     showToast('Targets saved!', 'success');
 
+    // Update the preview with saved values
+    updateTargetCaloriesPreview();
+
     // Refresh analytics to show updated targets
     loadMeals();
+}
+
+// Update calories preview in real-time as user types
+function updateTargetCaloriesPreview() {
+    const protein = parseInt(document.getElementById('targetProtein').value) || 0;
+    const carbs = parseInt(document.getElementById('targetCarbs').value) || 0;
+    const fat = parseInt(document.getElementById('targetFat').value) || 0;
+
+    const proteinCal = protein * 4;
+    const carbsCal = carbs * 4;
+    const fatCal = fat * 9;
+    const totalCal = proteinCal + carbsCal + fatCal;
+
+    document.getElementById('calcTargetCalories').textContent = totalCal;
+    document.getElementById('calcProteinCal').textContent = proteinCal;
+    document.getElementById('calcCarbsCal').textContent = carbsCal;
+    document.getElementById('calcFatCal').textContent = fatCal;
 }
 
 // Load saved targets into settings form
@@ -1566,6 +1586,9 @@ function loadMacroTargetsIntoForm() {
     if (carbsInput && targets.carbs) carbsInput.value = targets.carbs;
     if (fatInput && targets.fat) fatInput.value = targets.fat;
     if (sugarInput && targets.sugar) sugarInput.value = targets.sugar;
+
+    // Update calories preview with loaded values
+    updateTargetCaloriesPreview();
 }
 
 // Sync targets to Google Sheets (Settings tab)
@@ -1882,6 +1905,11 @@ function setupEventListeners() {
 
     // Macro targets
     document.getElementById('saveTargetsBtn').addEventListener('click', saveMacroTargets);
+
+    // Real-time calorie calculation for target inputs
+    ['targetProtein', 'targetCarbs', 'targetFat'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateTargetCaloriesPreview);
+    });
 
     // Form
     document.getElementById('mealForm').addEventListener('submit', handleSubmit);
