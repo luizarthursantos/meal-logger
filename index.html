@@ -1152,6 +1152,174 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
+        /* Pie Chart Styles */
+        .pie-chart-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            padding: 10px 0;
+        }
+
+        #macroPieChart {
+            max-width: 140px;
+            max-height: 140px;
+        }
+
+        .pie-chart-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        .legend-color.protein {
+            background: var(--protein-color);
+        }
+
+        .legend-color.carbs {
+            background: var(--carbs-color);
+        }
+
+        .legend-color.fat {
+            background: var(--fat-color);
+        }
+
+        .legend-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            min-width: 55px;
+        }
+
+        .legend-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Daily Targets Styles */
+        .targets-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .target-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .target-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .target-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .target-values {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .target-bar-track {
+            height: 8px;
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .target-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .target-bar-fill.protein {
+            background: var(--protein-color);
+        }
+
+        .target-bar-fill.carbs {
+            background: var(--carbs-color);
+        }
+
+        .target-bar-fill.fat {
+            background: var(--fat-color);
+        }
+
+        .target-bar-fill.sugar {
+            background: var(--sugar-color);
+        }
+
+        .target-bar-fill.over-target {
+            background: linear-gradient(90deg, var(--accent-primary) 100%, #ff6b6b 100%);
+        }
+
+        .targets-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Macro Targets Settings Form */
+        .macro-targets-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .target-input-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .target-input-row label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            min-width: 90px;
+        }
+
+        .target-input-row input {
+            flex: 1;
+            max-width: 120px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            text-align: right;
+        }
+
+        .target-input-row input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .target-input-row input::placeholder {
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -1229,6 +1397,73 @@
                     <h3>Today's Intake</h3>
                     <div class="analytics-big-number" id="analyticsDailyCalories">0</div>
                     <div class="analytics-label">calories consumed</div>
+                </div>
+
+                <div class="analytics-card">
+                    <h3>Calories by Macro</h3>
+                    <div class="pie-chart-container">
+                        <canvas id="macroPieChart" width="180" height="180"></canvas>
+                        <div class="pie-chart-legend" id="pieChartLegend">
+                            <div class="legend-item">
+                                <span class="legend-color protein"></span>
+                                <span class="legend-label">Protein</span>
+                                <span class="legend-value" id="proteinCalPercent">0%</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color carbs"></span>
+                                <span class="legend-label">Carbs</span>
+                                <span class="legend-value" id="carbsCalPercent">0%</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color fat"></span>
+                                <span class="legend-label">Fat</span>
+                                <span class="legend-value" id="fatCalPercent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-card">
+                    <h3>Daily Targets</h3>
+                    <div class="targets-container" id="targetsContainer">
+                        <div class="target-row">
+                            <div class="target-info">
+                                <span class="target-label">Protein</span>
+                                <span class="target-values"><span id="proteinActual">0</span>g / <span id="proteinTarget">--</span>g</span>
+                            </div>
+                            <div class="target-bar-track">
+                                <div class="target-bar-fill protein" id="proteinTargetBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="target-row">
+                            <div class="target-info">
+                                <span class="target-label">Carbs</span>
+                                <span class="target-values"><span id="carbsActual">0</span>g / <span id="carbsTarget">--</span>g</span>
+                            </div>
+                            <div class="target-bar-track">
+                                <div class="target-bar-fill carbs" id="carbsTargetBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="target-row">
+                            <div class="target-info">
+                                <span class="target-label">Fat</span>
+                                <span class="target-values"><span id="fatActual">0</span>g / <span id="fatTarget">--</span>g</span>
+                            </div>
+                            <div class="target-bar-track">
+                                <div class="target-bar-fill fat" id="fatTargetBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="target-row">
+                            <div class="target-info">
+                                <span class="target-label">Sugar</span>
+                                <span class="target-values"><span id="sugarActual">0</span>g / <span id="sugarTarget">--</span>g</span>
+                            </div>
+                            <div class="target-bar-track">
+                                <div class="target-bar-fill sugar" id="sugarTargetBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <p class="targets-hint" id="targetsHint">Set your daily targets in Settings</p>
+                    </div>
                 </div>
 
                 <div class="analytics-card">
@@ -1413,6 +1648,32 @@
                 </div>
                 <div class="sheet-actions" style="margin-top: 10px;">
                     <button class="btn-primary" id="syncNowBtn" disabled>Sync Now</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Daily Macro Targets</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                    Set your daily macro goals to track your progress in the Analytics tab.
+                </p>
+                <div class="macro-targets-form">
+                    <div class="target-input-row">
+                        <label for="targetProtein">Protein (g)</label>
+                        <input type="number" id="targetProtein" placeholder="e.g., 150" min="0">
+                    </div>
+                    <div class="target-input-row">
+                        <label for="targetCarbs">Carbs (g)</label>
+                        <input type="number" id="targetCarbs" placeholder="e.g., 250" min="0">
+                    </div>
+                    <div class="target-input-row">
+                        <label for="targetFat">Fat (g)</label>
+                        <input type="number" id="targetFat" placeholder="e.g., 65" min="0">
+                    </div>
+                    <div class="target-input-row">
+                        <label for="targetSugar">Sugar (g)</label>
+                        <input type="number" id="targetSugar" placeholder="e.g., 50" min="0">
+                    </div>
+                    <button class="btn-primary" id="saveTargetsBtn" style="margin-top: 15px; width: 100%;">Save Targets</button>
                 </div>
             </div>
         </div>
