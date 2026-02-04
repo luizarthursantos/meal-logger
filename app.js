@@ -23,6 +23,9 @@ let selectedSheetId = null;
 let isSyncing = false;
 let pendingConflicts = [];
 
+// Photo analysis state
+let selectedPhotoBase64 = null;
+
 // Generate a unique sync ID for meals
 function generateSyncId() {
     return 'meal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1549,8 +1552,208 @@ async function saveMacroTargets() {
 
     showToast('Targets saved!', 'success');
 
+    // Update the preview with saved values
+    updateTargetCaloriesPreview();
+
     // Refresh analytics to show updated targets
     loadMeals();
+}
+
+// Update calories preview in real-time as user types
+function updateTargetCaloriesPreview() {
+    const protein = parseInt(document.getElementById('targetProtein').value) || 0;
+    const carbs = parseInt(document.getElementById('targetCarbs').value) || 0;
+    const fat = parseInt(document.getElementById('targetFat').value) || 0;
+
+    const proteinCal = protein * 4;
+    const carbsCal = carbs * 4;
+    const fatCal = fat * 9;
+    const totalCal = proteinCal + carbsCal + fatCal;
+
+    document.getElementById('calcTargetCalories').textContent = totalCal;
+    document.getElementById('calcProteinCal').textContent = proteinCal;
+    document.getElementById('calcCarbsCal').textContent = carbsCal;
+    document.getElementById('calcFatCal').textContent = fatCal;
+}
+
+// Claude API key management
+function saveClaudeApiKey() {
+    const apiKey = document.getElementById('claudeApiKey').value.trim();
+    if (apiKey) {
+        localStorage.setItem('mealLogger_claudeApiKey', apiKey);
+        showToast('API key saved!', 'success');
+    } else {
+        localStorage.removeItem('mealLogger_claudeApiKey');
+        showToast('API key removed', 'success');
+    }
+}
+
+function getClaudeApiKey() {
+    return localStorage.getItem('mealLogger_claudeApiKey') || '';
+}
+
+function loadClaudeApiKeyIntoForm() {
+    const apiKey = getClaudeApiKey();
+    const input = document.getElementById('claudeApiKey');
+    if (input && apiKey) {
+        input.value = apiKey;
+    }
+}
+
+// Photo upload and analysis
+function handlePhotoSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image too large. Max 5MB.', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        selectedPhotoBase64 = e.target.result;
+
+        // Show preview
+        const preview = document.getElementById('photoPreview');
+        const previewImg = document.getElementById('previewImage');
+        const uploadBtn = document.getElementById('photoUploadBtn');
+        const descContainer = document.getElementById('photoDescContainer');
+
+        previewImg.src = selectedPhotoBase64;
+        preview.style.display = 'block';
+        uploadBtn.style.display = 'none';
+        descContainer.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removePhoto() {
+    selectedPhotoBase64 = null;
+    document.getElementById('foodPhoto').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoUploadBtn').style.display = 'flex';
+    document.getElementById('photoDescContainer').style.display = 'none';
+    document.getElementById('photoDescription').value = '';
+}
+
+async function analyzePhotoWithClaude() {
+    const apiKey = getClaudeApiKey();
+    if (!apiKey) {
+        showToast('Please add your Claude API key in Settings', 'error');
+        return;
+    }
+
+    if (!selectedPhotoBase64) {
+        showToast('Please select a photo first', 'error');
+        return;
+    }
+
+    const description = document.getElementById('photoDescription').value.trim();
+    const loadingEl = document.getElementById('analysisLoading');
+    const analyzeBtn = document.getElementById('analyzePhotoBtn');
+
+    // Show loading state
+    loadingEl.style.display = 'flex';
+    analyzeBtn.disabled = true;
+
+    try {
+        // Extract base64 data (remove data:image/...;base64, prefix)
+        const base64Data = selectedPhotoBase64.split(',')[1];
+        const mediaType = selectedPhotoBase64.split(';')[0].split(':')[1];
+
+        const prompt = `Analyze this food image and estimate the nutritional macros.
+${description ? `Additional context: ${description}` : ''}
+
+Please respond with ONLY a JSON object in this exact format, no other text:
+{
+  "name": "Brief name of the food/meal",
+  "protein": estimated protein in grams (number),
+  "carbs": estimated carbs in grams (number),
+  "fat": estimated fat in grams (number),
+  "sugar": estimated sugar in grams (number),
+  "confidence": "low" | "medium" | "high",
+  "notes": "Brief note about the estimation"
+}`;
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 500,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'image',
+                            source: {
+                                type: 'base64',
+                                media_type: mediaType,
+                                data: base64Data
+                            }
+                        },
+                        {
+                            type: 'text',
+                            text: prompt
+                        }
+                    ]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'API request failed');
+        }
+
+        const data = await response.json();
+        const content = data.content[0].text;
+
+        // Parse the JSON response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('Could not parse AI response');
+        }
+
+        const macros = JSON.parse(jsonMatch[0]);
+
+        // Fill in the form
+        document.getElementById('mealName').value = macros.name || '';
+        document.getElementById('protein').value = Math.round(macros.protein) || 0;
+        document.getElementById('carbs').value = Math.round(macros.carbs) || 0;
+        document.getElementById('fat').value = Math.round(macros.fat) || 0;
+        document.getElementById('sugar').value = Math.round(macros.sugar) || 0;
+
+        // Update calories
+        calculateCalories();
+
+        // Add confidence note
+        const notes = document.getElementById('notes');
+        const confidenceNote = `AI estimate (${macros.confidence} confidence)${macros.notes ? ': ' + macros.notes : ''}`;
+        notes.value = confidenceNote;
+
+        showToast('Macros estimated successfully!', 'success');
+
+    } catch (error) {
+        console.error('Error analyzing photo:', error);
+        showToast(`Analysis failed: ${error.message}`, 'error');
+    } finally {
+        loadingEl.style.display = 'none';
+        analyzeBtn.disabled = false;
+    }
 }
 
 // Load saved targets into settings form
@@ -1562,10 +1765,13 @@ function loadMacroTargetsIntoForm() {
     const fatInput = document.getElementById('targetFat');
     const sugarInput = document.getElementById('targetSugar');
 
-    if (proteinInput && targets.protein) proteinInput.value = targets.protein;
-    if (carbsInput && targets.carbs) carbsInput.value = targets.carbs;
-    if (fatInput && targets.fat) fatInput.value = targets.fat;
-    if (sugarInput && targets.sugar) sugarInput.value = targets.sugar;
+    if (proteinInput) proteinInput.value = targets.protein || '';
+    if (carbsInput) carbsInput.value = targets.carbs || '';
+    if (fatInput) fatInput.value = targets.fat || '';
+    if (sugarInput) sugarInput.value = targets.sugar || '';
+
+    // Update calories preview with loaded values (use setTimeout to ensure DOM updates)
+    setTimeout(updateTargetCaloriesPreview, 0);
 }
 
 // Sync targets to Google Sheets (Settings tab)
@@ -1740,11 +1946,15 @@ function closeModal() {
     document.getElementById('mealForm').reset();
     document.getElementById('mealId').value = '';
     document.getElementById('calories').value = 0;
+
+    // Reset photo state
+    removePhoto();
 }
 
 function openSettings() {
     document.getElementById('settingsOverlay').classList.add('active');
     loadMacroTargetsIntoForm();
+    loadClaudeApiKeyIntoForm();
 }
 
 function closeSettings() {
@@ -1882,6 +2092,22 @@ function setupEventListeners() {
 
     // Macro targets
     document.getElementById('saveTargetsBtn').addEventListener('click', saveMacroTargets);
+
+    // Real-time calorie calculation for target inputs
+    ['targetProtein', 'targetCarbs', 'targetFat'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateTargetCaloriesPreview);
+    });
+
+    // Claude API key
+    document.getElementById('saveApiKeyBtn').addEventListener('click', saveClaudeApiKey);
+
+    // Photo upload and analysis
+    document.getElementById('photoUploadBtn').addEventListener('click', () => {
+        document.getElementById('foodPhoto').click();
+    });
+    document.getElementById('foodPhoto').addEventListener('change', handlePhotoSelect);
+    document.getElementById('removePhotoBtn').addEventListener('click', removePhoto);
+    document.getElementById('analyzePhotoBtn').addEventListener('click', analyzePhotoWithClaude);
 
     // Form
     document.getElementById('mealForm').addEventListener('submit', handleSubmit);
