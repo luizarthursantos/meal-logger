@@ -1299,21 +1299,34 @@ function updateDailyAnalytics(meals) {
 // Draw pie chart showing calories by macro
 function drawMacroPieChart(totals) {
     const canvas = document.getElementById('macroPieChart');
-    if (!canvas) return;
+    if (!canvas) {
+        console.log('Pie chart canvas not found');
+        return;
+    }
 
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.log('Could not get canvas context');
+        return;
+    }
+
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) - 10;
 
     // Calculate calories from each macro
-    const proteinCal = totals.protein * 4;
-    const carbsCal = totals.carbs * 4;
-    const fatCal = totals.fat * 9;
+    const proteinCal = (totals.protein || 0) * 4;
+    const carbsCal = (totals.carbs || 0) * 4;
+    const fatCal = (totals.fat || 0) * 9;
     const totalMacroCal = proteinCal + carbsCal + fatCal;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Update legend elements
+    const proteinPercentEl = document.getElementById('proteinCalPercent');
+    const carbsPercentEl = document.getElementById('carbsCalPercent');
+    const fatPercentEl = document.getElementById('fatCalPercent');
 
     if (totalMacroCal === 0) {
         // Draw empty state
@@ -1329,9 +1342,9 @@ function drawMacroPieChart(totals) {
         ctx.fillText('No data', centerX, centerY);
 
         // Update legend
-        document.getElementById('proteinCalPercent').textContent = '0%';
-        document.getElementById('carbsCalPercent').textContent = '0%';
-        document.getElementById('fatCalPercent').textContent = '0%';
+        if (proteinPercentEl) proteinPercentEl.textContent = '0%';
+        if (carbsPercentEl) carbsPercentEl.textContent = '0%';
+        if (fatPercentEl) fatPercentEl.textContent = '0%';
         return;
     }
 
@@ -1341,15 +1354,15 @@ function drawMacroPieChart(totals) {
     const fatPercent = 100 - proteinPercent - carbsPercent;
 
     // Update legend
-    document.getElementById('proteinCalPercent').textContent = `${proteinPercent}%`;
-    document.getElementById('carbsCalPercent').textContent = `${carbsPercent}%`;
-    document.getElementById('fatCalPercent').textContent = `${fatPercent}%`;
+    if (proteinPercentEl) proteinPercentEl.textContent = `${proteinPercent}%`;
+    if (carbsPercentEl) carbsPercentEl.textContent = `${carbsPercent}%`;
+    if (fatPercentEl) fatPercentEl.textContent = `${fatPercent}%`;
 
     // Colors matching CSS variables
     const colors = {
-        protein: '#FF6B6B',
-        carbs: '#4ECDC4',
-        fat: '#FFE66D'
+        protein: '#6c5ce7',
+        carbs: '#fdcb6e',
+        fat: '#e17055'
     };
 
     // Draw pie slices

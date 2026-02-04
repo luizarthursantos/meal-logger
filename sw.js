@@ -1,5 +1,5 @@
 // Meal Logger Service Worker
-const CACHE_NAME = 'meal-logger-v2';
+const CACHE_NAME = 'meal-logger-v3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
