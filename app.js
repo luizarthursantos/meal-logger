@@ -1286,8 +1286,208 @@ function updateDailyAnalytics(meals) {
     document.getElementById('dinnerCount').textContent = typeCounts.dinner;
     document.getElementById('snackCount').textContent = typeCounts.snack;
 
+    // Update pie chart
+    drawMacroPieChart(totals);
+
+    // Update targets progress
+    updateTargetsProgress(totals);
+
     // Update the date label
     updateDateDisplay();
+}
+
+// Draw pie chart showing calories by macro
+function drawMacroPieChart(totals) {
+    const canvas = document.getElementById('macroPieChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+
+    // Calculate calories from each macro
+    const proteinCal = totals.protein * 4;
+    const carbsCal = totals.carbs * 4;
+    const fatCal = totals.fat * 9;
+    const totalMacroCal = proteinCal + carbsCal + fatCal;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (totalMacroCal === 0) {
+        // Draw empty state
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fill();
+
+        ctx.fillStyle = '#666';
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No data', centerX, centerY);
+
+        // Update legend
+        document.getElementById('proteinCalPercent').textContent = '0%';
+        document.getElementById('carbsCalPercent').textContent = '0%';
+        document.getElementById('fatCalPercent').textContent = '0%';
+        return;
+    }
+
+    // Calculate percentages
+    const proteinPercent = Math.round((proteinCal / totalMacroCal) * 100);
+    const carbsPercent = Math.round((carbsCal / totalMacroCal) * 100);
+    const fatPercent = 100 - proteinPercent - carbsPercent;
+
+    // Update legend
+    document.getElementById('proteinCalPercent').textContent = `${proteinPercent}%`;
+    document.getElementById('carbsCalPercent').textContent = `${carbsPercent}%`;
+    document.getElementById('fatCalPercent').textContent = `${fatPercent}%`;
+
+    // Colors matching CSS variables
+    const colors = {
+        protein: '#FF6B6B',
+        carbs: '#4ECDC4',
+        fat: '#FFE66D'
+    };
+
+    // Draw pie slices
+    const data = [
+        { value: proteinCal, color: colors.protein },
+        { value: carbsCal, color: colors.carbs },
+        { value: fatCal, color: colors.fat }
+    ];
+
+    let startAngle = -Math.PI / 2; // Start from top
+
+    data.forEach(slice => {
+        if (slice.value > 0) {
+            const sliceAngle = (slice.value / totalMacroCal) * 2 * Math.PI;
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = slice.color;
+            ctx.fill();
+
+            startAngle += sliceAngle;
+        }
+    });
+
+    // Draw center circle for donut effect
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 0.55, 0, 2 * Math.PI);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill();
+
+    // Draw total calories in center
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(totalMacroCal, centerX, centerY - 8);
+
+    ctx.fillStyle = '#888';
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('cal', centerX, centerY + 12);
+}
+
+// Update targets progress bars
+function updateTargetsProgress(totals) {
+    const targets = getMacroTargets();
+
+    // Update protein
+    document.getElementById('proteinActual').textContent = totals.protein;
+    document.getElementById('proteinTarget').textContent = targets.protein || '--';
+    updateTargetBar('proteinTargetBar', totals.protein, targets.protein);
+
+    // Update carbs
+    document.getElementById('carbsActual').textContent = totals.carbs;
+    document.getElementById('carbsTarget').textContent = targets.carbs || '--';
+    updateTargetBar('carbsTargetBar', totals.carbs, targets.carbs);
+
+    // Update fat
+    document.getElementById('fatActual').textContent = totals.fat;
+    document.getElementById('fatTarget').textContent = targets.fat || '--';
+    updateTargetBar('fatTargetBar', totals.fat, targets.fat);
+
+    // Update sugar
+    document.getElementById('sugarActual').textContent = totals.sugar;
+    document.getElementById('sugarTarget').textContent = targets.sugar || '--';
+    updateTargetBar('sugarTargetBar', totals.sugar, targets.sugar);
+
+    // Show/hide hint
+    const hint = document.getElementById('targetsHint');
+    if (hint) {
+        const hasTargets = targets.protein || targets.carbs || targets.fat || targets.sugar;
+        hint.style.display = hasTargets ? 'none' : 'block';
+    }
+}
+
+function updateTargetBar(barId, actual, target) {
+    const bar = document.getElementById(barId);
+    if (!bar) return;
+
+    if (!target) {
+        bar.style.width = '0%';
+        return;
+    }
+
+    const percentage = Math.min((actual / target) * 100, 100);
+    bar.style.width = `${percentage}%`;
+
+    // Add over-target indicator if exceeded
+    if (actual > target) {
+        bar.style.width = '100%';
+        bar.classList.add('over-target');
+    } else {
+        bar.classList.remove('over-target');
+    }
+}
+
+// Get macro targets from localStorage
+function getMacroTargets() {
+    return {
+        protein: parseInt(localStorage.getItem('mealLogger_targetProtein')) || 0,
+        carbs: parseInt(localStorage.getItem('mealLogger_targetCarbs')) || 0,
+        fat: parseInt(localStorage.getItem('mealLogger_targetFat')) || 0,
+        sugar: parseInt(localStorage.getItem('mealLogger_targetSugar')) || 0
+    };
+}
+
+// Save macro targets to localStorage
+function saveMacroTargets() {
+    const protein = document.getElementById('targetProtein').value;
+    const carbs = document.getElementById('targetCarbs').value;
+    const fat = document.getElementById('targetFat').value;
+    const sugar = document.getElementById('targetSugar').value;
+
+    localStorage.setItem('mealLogger_targetProtein', protein || '');
+    localStorage.setItem('mealLogger_targetCarbs', carbs || '');
+    localStorage.setItem('mealLogger_targetFat', fat || '');
+    localStorage.setItem('mealLogger_targetSugar', sugar || '');
+
+    showToast('Targets saved!', 'success');
+
+    // Refresh analytics to show updated targets
+    loadMeals();
+}
+
+// Load saved targets into settings form
+function loadMacroTargetsIntoForm() {
+    const targets = getMacroTargets();
+
+    const proteinInput = document.getElementById('targetProtein');
+    const carbsInput = document.getElementById('targetCarbs');
+    const fatInput = document.getElementById('targetFat');
+    const sugarInput = document.getElementById('targetSugar');
+
+    if (proteinInput && targets.protein) proteinInput.value = targets.protein;
+    if (carbsInput && targets.carbs) carbsInput.value = targets.carbs;
+    if (fatInput && targets.fat) fatInput.value = targets.fat;
+    if (sugarInput && targets.sugar) sugarInput.value = targets.sugar;
 }
 
 async function updateWeeklyAnalytics() {
@@ -1371,6 +1571,7 @@ function closeModal() {
 
 function openSettings() {
     document.getElementById('settingsOverlay').classList.add('active');
+    loadMacroTargetsIntoForm();
 }
 
 function closeSettings() {
@@ -1506,6 +1707,9 @@ function setupEventListeners() {
     document.getElementById('loadFromSheet').addEventListener('click', loadFromSheet);
     document.getElementById('syncNowBtn').addEventListener('click', smartSync);
 
+    // Macro targets
+    document.getElementById('saveTargetsBtn').addEventListener('click', saveMacroTargets);
+
     // Form
     document.getElementById('mealForm').addEventListener('submit', handleSubmit);
 
@@ -1573,3 +1777,4 @@ window.switchTab = switchTab;
 window.switchAnalyticsSubTab = switchAnalyticsSubTab;
 window.goToPrevDay = goToPrevDay;
 window.goToNextDay = goToNextDay;
+window.saveMacroTargets = saveMacroTargets;
